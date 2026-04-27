@@ -10,12 +10,12 @@ Thank you for considering to help out!
 3. Open a PR to `develop`.
    - Reference the [GitHub issue](https://github.com/mudomi/onykia-engine/issues) you are trying to solve.
 4. Address review feedback.
-5. Maintainers merge to `develop`, then merge to `main` for release.
+5. Maintainers merge to `develop`, then merge to `release` for release.
 
 ## Branches and environments
 
 - `develop` = test channel
-- `main` = stable release channel
+- `release` = stable release channel
 
 ## Change Promotion
 
@@ -23,7 +23,7 @@ PRs into `develop` are merged as **squash commits**.
 
 That squash commit title must follow [Conventional Commits](https://www.conventionalcommits.org/) format.
 
-When it's release time, maintainers promote `develop` to `main`.
+When it's release time, maintainers promote `develop` to `release`.
 
 ## Versioning and builds
 
@@ -32,7 +32,7 @@ When it's release time, maintainers promote `develop` to `main`.
 
 **Release:**
 
-1. Maintainer fast-forwards `develop` --> `main`.
+1. Maintainer fast-forwards `develop` --> `release`.
 2. automatic tags `vX.Y.Z` and GitHub Release with auto-generated notes.
 
 The packages `@mudomi/onykia-engine`, `@mudomi/onykia-codemirror`, `@mudomi/onykia-monaco` share one version.

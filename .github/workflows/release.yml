@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [release]
 
 concurrency:
   group: release
@@ -25,6 +25,7 @@ jobs:
         with:
           config-file: .github/release-please-config.json
           manifest-file: .github/.release-please-manifest.json
+          target-branch: release
 
   publish:
     needs: release-please
