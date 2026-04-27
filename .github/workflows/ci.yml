@@ -11,7 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  ts:
+    name: TypeScript
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +22,25 @@ jobs:
           node-version: 20
           cache: npm
 
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build packages
+        run: npm run build:ts
+
+      - name: Type-check examples
+        run: |
+          npm run -w onykia-example-codemirror check
+          npm run -w onykia-example-monaco     check
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
@@ -28,29 +48,15 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
-
-      - name: Install npm deps
-        run: npm ci
-
-      - name: Lint (TS)
-        run: npm run lint
-
-      - name: Lint (Rust — formatting)
+      - name: Format
         working-directory: src/rust
         run: cargo fmt --check
 
-      - name: Lint (Rust — clippy)
+      - name: Clippy
         run: cargo clippy --target wasm32-unknown-unknown -p onykia_core --all-targets -- -D warnings
 
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+
       - name: Build WASM
-        run: npm run build:wasm
-
-      - name: Build TS packages
-        run: npm run build:ts
-
-      - name: Type-check examples
-        run: |
-          npm run -w onykia-example-codemirror check
-          npm run -w onykia-example-monaco     check
+        run: bash scripts/build-wasm.sh
