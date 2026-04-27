@@ -33,7 +33,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+        run: |
+          VERSION=$(awk '/^name = "wasm-bindgen"$/{getline; gsub(/version = |"/, "", $0); print; exit}' Cargo.lock)
+          cargo install wasm-bindgen-cli --version "$VERSION" --locked
 
       - name: Install npm deps
         run: npm ci
