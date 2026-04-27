@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    branches: [release]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.rp.outputs.releases_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
+          target-branch: release
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rust-src
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-bindgen-cli
+        run: |
+          VERSION=$(awk '/^name = "wasm-bindgen"$/{getline; gsub(/version = |"/, "", $0); print; exit}' Cargo.lock)
+          cargo install wasm-bindgen-cli --version "$VERSION" --locked
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build WASM
+        run: npm run build:wasm
+
+      - name: Build TS packages
+        run: npm run build:ts
+
+      - name: Publish to npm (latest tag)
+        run: |
+          npm publish --workspace ./packages/engine     --access public --provenance
+          npm publish --workspace ./packages/codemirror --access public --provenance
+          npm publish --workspace ./packages/monaco     --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

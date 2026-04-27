@@ -1,0 +1,26 @@
+{
+  "name": "@mudomi/onykia-engine",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Editor-agnostic Typst engine: worker pool, message bus, and IDE-feature client.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./adapter": {
+      "types": "./dist/adapter.d.ts",
+      "import": "./dist/adapter.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, release]
+  push:
+    branches: [develop, release]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ts:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build packages
+        run: npm run build:ts
+
+      - name: Type-check examples
+        run: |
+          npm run -w onykia-example-codemirror check
+          npm run -w onykia-example-monaco     check
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rust-src, rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        working-directory: src/rust
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --target wasm32-unknown-unknown -p onykia_core --all-targets -- -D warnings
+
+      - name: Install wasm-bindgen-cli
+        # Match the version Cargo resolved for the `wasm-bindgen` crate so the
+        # CLI's schema and the produced WASM's schema stay in lockstep.
+        run: |
+          VERSION=$(awk '/^name = "wasm-bindgen"$/{getline; gsub(/version = |"/, "", $0); print; exit}' Cargo.lock)
+          cargo install wasm-bindgen-cli --version "$VERSION" --locked
+
+      - name: Build WASM
+        run: bash scripts/build-wasm.sh

@@ -1,0 +1,5 @@
+{
+  "packages/engine": "0.1.0",
+  "packages/codemirror": "0.1.0",
+  "packages/monaco": "0.1.0"
+}
