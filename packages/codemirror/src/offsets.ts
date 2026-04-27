@@ -1,0 +1,81 @@
+/**
+ * Offset conversion between CodeMirror (UTF-16 code units) and Rust/Typst
+ * (UTF-8 bytes). All Typst source positions - edits, highlights, diagnostics,
+ * cursor queries - are UTF-8 byte offsets. CodeMirror and JavaScript strings
+ * use UTF-16 code unit positions. For pure-ASCII text both representations are
+ * identical; they diverge on any non-ASCII character.
+ */
+
+/**
+ * Convert a CodeMirror / JavaScript UTF-16 string offset to a UTF-8 byte
+ * offset. Pass the text of the document at the relevant point in time.
+ */
+export function toByteOffset(text: string, utf16Offset: number): number {
+  // TextEncoder.encode(slice) is the simplest correct implementation: JS
+  // string slicing operates in UTF-16 code units (same as CM positions), so
+  // slicing at utf16Offset and encoding gives the byte count up to that point.
+  return new TextEncoder().encode(text.slice(0, utf16Offset)).length;
+}
+
+/**
+ * Convert a UTF-8 byte offset from Rust/Typst back to a CodeMirror / JS
+ * UTF-16 string offset.
+ */
+export function fromByteOffset(text: string, byteOffset: number): number {
+  let bytes = 0;
+  let i = 0;
+  while (i < text.length && bytes < byteOffset) {
+    const code = text.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      // Surrogate pair --> U+10000–U+10FFFF --> 4 UTF-8 bytes, 2 UTF-16 units.
+      bytes += 4;
+      i += 2;
+    } else if (code >= 0x800) {
+      bytes += 3;
+      i++;
+    } else if (code >= 0x80) {
+      bytes += 2;
+      i++;
+    } else {
+      bytes++;
+      i++;
+    }
+  }
+  return i;
+}
+
+/**
+ * Build a Uint32Array mapping each UTF-8 byte index --> UTF-16 code unit index
+ * for the given text. O(n) construction, O(1) lookup per offset - use this
+ * when converting many offsets against the same text (e.g. highlight tokens).
+ */
+export function buildByteToCharMap(text: string): Uint32Array {
+  // Upper bound: every byte could be its own ASCII char (1 byte per char),
+  // so byteLen ≤ text.length * 4 (worst case all 4-byte sequences).
+  // We don't know byteLen up front, so encode once to get it.
+  const utf8 = new TextEncoder().encode(text);
+  const map = new Uint32Array(utf8.length + 1);
+  let byteIdx = 0;
+  for (let charIdx = 0; charIdx < text.length; charIdx++) {
+    const code = text.charCodeAt(charIdx);
+    map[byteIdx] = charIdx;
+    if (code >= 0xd800 && code <= 0xdbff) {
+      map[byteIdx + 1] = charIdx;
+      map[byteIdx + 2] = charIdx;
+      map[byteIdx + 3] = charIdx;
+      byteIdx += 4;
+      charIdx++; // consume the low surrogate
+    } else if (code >= 0x800) {
+      map[byteIdx + 1] = charIdx;
+      map[byteIdx + 2] = charIdx;
+      byteIdx += 3;
+    } else if (code >= 0x80) {
+      map[byteIdx + 1] = charIdx;
+      byteIdx += 2;
+    } else {
+      byteIdx++;
+    }
+  }
+  map[byteIdx] = text.length; // sentinel for end-of-doc offsets
+  return map;
+}

@@ -1,0 +1,50 @@
+[package]
+name = "onykia_core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "WASM wrapper around the Typst compiler for the onykia-engine web runtime."
+license = "MIT"
+repository = "https://github.com/mudomi/onykia-engine"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Typst compiler pieces. Pinned to 0.14 to match the target language level.
+typst = "0.14"
+typst-assets = { version = "0.14", features = ["fonts"] }
+typst-syntax = "0.14"
+typst-ide = "0.14"
+typst-library = "0.14"
+typst-pdf = "0.14"
+typst-svg = "0.14"
+typst-render = "0.14"
+typst-eval = "0.14"
+typst-utils = "0.14"
+
+# WASM bridge.
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde-wasm-bindgen = "0.6"
+serde_bytes = "0.11"
+
+# Fallible helpers.
+ecow = "0.2"
+comemo = "0.4"
+
+# Deterministic time for the virtual world (no wall clock in wasm32-unknown-unknown).
+time = { version = "0.3", default-features = false, features = ["alloc"] }
+
+# Console panics + logging.
+console_error_panic_hook = { version = "0.1", optional = true }
+
+# Random source inside wasm (typst's dependencies transitively pull getrandom).
+getrandom = { version = "0.2", features = ["js"] }
+
+[features]
+default = ["panic-hook"]
+panic-hook = ["dep:console_error_panic_hook"]
+# Threaded WASM builds need a [patch.crates-io] block — see docs/notes/Threaded-WASM.md.

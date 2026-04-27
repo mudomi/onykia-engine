@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Onykia x Monaco</title>
+    <style>
+      html, body, #app { margin: 0; height: 100%; }
+      #app { display: grid; grid-template-columns: 1fr 1fr; }
+      #editor, #preview { height: 100vh; overflow: auto; }
+      #editor { border-right: 1px solid #ddd; }
+      #preview { padding: 16px; background: #fafafa; }
+      #preview svg { width: 100%; height: auto; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="editor"></div>
+      <div id="preview"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

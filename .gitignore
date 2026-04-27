@@ -1,0 +1,16 @@
+# Build outputs
+target/
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# WASM build outputs
+example/public/assets/*
+!example/public/assets/.gitkeep
+*.wasm.br
+
+# Logs
+*.log
+npm-debug.log*

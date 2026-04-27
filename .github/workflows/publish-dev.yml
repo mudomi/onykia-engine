@@ -1,0 +1,70 @@
+name: Publish dev
+
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: publish-dev
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rust-src
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.100 --locked
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build WASM
+        run: npm run build:wasm
+
+      - name: Build TS packages
+        run: npm run build:ts
+
+      - name: Compute dev version
+        id: devver
+        run: |
+          BASE=$(node -p "require('./packages/engine/package.json').version")
+          # Strip any existing prerelease suffix, then append -dev.<n>+<sha>
+          BASE=${BASE%%-*}
+          COUNT=$(git rev-list --count HEAD)
+          SHA=$(git rev-parse --short HEAD)
+          echo "version=${BASE}-dev.${COUNT}+${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp dev version into all packages
+        run: |
+          V="${{ steps.devver.outputs.version }}"
+          for pkg in packages/engine packages/codemirror packages/monaco; do
+            npm version "$V" --no-git-tag-version --workspace "./$pkg" --allow-same-version
+          done
+
+      - name: Publish to npm (dev tag)
+        run: |
+          npm publish --workspace ./packages/engine     --access public --tag dev --provenance
+          npm publish --workspace ./packages/codemirror --access public --tag dev --provenance
+          npm publish --workspace ./packages/monaco     --access public --tag dev --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

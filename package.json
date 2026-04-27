@@ -1,0 +1,25 @@
+{
+  "name": "onykia-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Wrapper of Typst for in-browser use, with editor integrations.",
+  "workspaces": [
+    "packages/*",
+    "example/codemirror",
+    "example/monaco"
+  ],
+  "scripts": {
+    "build:wasm": "bash scripts/build-wasm.sh",
+    "build:ts": "npm run -w @mudomi/onykia-engine build && npm run -w @mudomi/onykia-codemirror build && npm run -w @mudomi/onykia-monaco build",
+    "build": "npm run build:wasm && npm run build:ts",
+    "lint": "oxlint packages example",
+    "example:codemirror": "npm run -w onykia-example-codemirror dev",
+    "example:monaco": "npm run -w onykia-example-monaco dev"
+  },
+  "devDependencies": {
+    "oxlint": "^1.16.0",
+    "typescript": "^5.6.0",
+    "wasm-opt": "^1.4.0"
+  }
+}
