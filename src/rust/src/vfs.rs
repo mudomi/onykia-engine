@@ -18,7 +18,11 @@ pub struct File {
 
 impl File {
     pub fn new(path: &str, mime: String, bytes: Bytes) -> Self {
-        let mut file = Self { mime, bytes, source: None };
+        let mut file = Self {
+            mime,
+            bytes,
+            source: None,
+        };
         file.source = file.build_source(path);
         file
     }
@@ -43,12 +47,15 @@ pub struct Vfs {
 
 impl Vfs {
     pub fn new() -> Self {
-        Self { files: HashMap::new() }
+        Self {
+            files: HashMap::new(),
+        }
     }
 
     pub fn create(&mut self, path: String, mime: String, bytes: Vec<u8>) {
         let bytes = Bytes::new(bytes);
-        self.files.insert(path.clone(), File::new(&path, mime, bytes));
+        self.files
+            .insert(path.clone(), File::new(&path, mime, bytes));
     }
 
     pub fn delete(&mut self, path: &str) -> bool {
@@ -56,7 +63,9 @@ impl Vfs {
     }
 
     pub fn rename(&mut self, from: &str, to: &str, mime: Option<String>) -> bool {
-        let Some(mut file) = self.files.remove(from) else { return false };
+        let Some(mut file) = self.files.remove(from) else {
+            return false;
+        };
         if let Some(m) = mime {
             file.mime = m;
         }

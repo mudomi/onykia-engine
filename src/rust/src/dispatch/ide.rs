@@ -40,7 +40,9 @@ pub const TAG_NAMES: &[&str] = &[
 ];
 
 pub fn tags(_state: &mut State) -> Result<JsValue, String> {
-    to_js(&TagsResponse { names: TAG_NAMES.to_vec() })
+    to_js(&TagsResponse {
+        names: TAG_NAMES.to_vec(),
+    })
 }
 
 // ─── highlight() ──────────────────────────────────────────────────────────
@@ -92,33 +94,68 @@ fn map_kind(kind: SyntaxKind) -> Option<u32> {
     use SyntaxKind as K;
     let idx: u32 = match kind {
         K::LineComment | K::BlockComment => 0, // typ-comment
-        K::LeftParen | K::RightParen
-        | K::LeftBracket | K::RightBracket
-        | K::LeftBrace | K::RightBrace
-        | K::Comma | K::Semicolon | K::Colon => 1, // typ-punct
-        K::Escape | K::Shorthand => 2,              // typ-escape
-        K::Strong => 3,                             // typ-strong
-        K::Emph => 4,                               // typ-emph
-        K::Link => 5,                               // typ-link
+        K::LeftParen
+        | K::RightParen
+        | K::LeftBracket
+        | K::RightBracket
+        | K::LeftBrace
+        | K::RightBrace
+        | K::Comma
+        | K::Semicolon
+        | K::Colon => 1, // typ-punct
+        K::Escape | K::Shorthand => 2,         // typ-escape
+        K::Strong => 3,                        // typ-strong
+        K::Emph => 4,                          // typ-emph
+        K::Link => 5,                          // typ-link
         K::Raw | K::RawLang | K::RawTrimmed | K::RawDelim => 6, // typ-raw
-        K::Label => 7,                              // typ-label
-        K::Ref | K::RefMarker => 8,                 // typ-ref
-        K::Heading | K::HeadingMarker => 9,         // typ-heading
+        K::Label => 7,                         // typ-label
+        K::Ref | K::RefMarker => 8,            // typ-ref
+        K::Heading | K::HeadingMarker => 9,    // typ-heading
         K::ListMarker | K::EnumMarker | K::TermMarker => 10, // typ-marker
-        K::Dollar | K::MathDelimited => 12,         // typ-math-delim
-        K::Underscore | K::Hat | K::Prime => 13,    // typ-math-op
-        K::Let | K::Set | K::Show | K::If | K::Else | K::For | K::While
-        | K::Return | K::Break | K::Continue | K::Import | K::Include
-        | K::As | K::In | K::Not | K::And | K::Or | K::None | K::Auto
-        | K::Context => 14,                          // typ-key
-        K::Plus | K::Minus | K::Star | K::Slash | K::Eq | K::EqEq
-        | K::ExclEq | K::Lt | K::LtEq | K::Gt | K::GtEq | K::PlusEq
-        | K::HyphEq | K::StarEq | K::SlashEq | K::Dots | K::Arrow => 15, // typ-op
-        K::Numeric | K::Int | K::Float => 16,       // typ-num
-        K::Str => 17,                               // typ-str
-        K::FuncCall => 18,                          // typ-func
-        K::Ident | K::MathIdent => 19,              // typ-pol
-        K::Error => 20,                             // typ-error
+        K::Dollar | K::MathDelimited => 12,    // typ-math-delim
+        K::Underscore | K::Hat | K::Prime => 13, // typ-math-op
+        K::Let
+        | K::Set
+        | K::Show
+        | K::If
+        | K::Else
+        | K::For
+        | K::While
+        | K::Return
+        | K::Break
+        | K::Continue
+        | K::Import
+        | K::Include
+        | K::As
+        | K::In
+        | K::Not
+        | K::And
+        | K::Or
+        | K::None
+        | K::Auto
+        | K::Context => 14, // typ-key
+        K::Plus
+        | K::Minus
+        | K::Star
+        | K::Slash
+        | K::Eq
+        | K::EqEq
+        | K::ExclEq
+        | K::Lt
+        | K::LtEq
+        | K::Gt
+        | K::GtEq
+        | K::PlusEq
+        | K::HyphEq
+        | K::StarEq
+        | K::SlashEq
+        | K::Dots
+        | K::Arrow => 15, // typ-op
+        K::Numeric | K::Int | K::Float => 16,  // typ-num
+        K::Str => 17,                          // typ-str
+        K::FuncCall => 18,                     // typ-func
+        K::Ident | K::MathIdent => 19,         // typ-pol
+        K::Error => 20,                        // typ-error
         _ => return None,
     };
     Some(idx)
@@ -223,13 +260,9 @@ pub fn autocomplete(state: &mut State, args: JsValue) -> Result<JsValue, String>
     };
 
     let doc = state.last_document.as_ref();
-    let Some((from, raw)) = typst_ide::autocomplete(
-        &state.world,
-        doc,
-        &source_clone,
-        args.cursor,
-        args.explicit,
-    ) else {
+    let Some((from, raw)) =
+        typst_ide::autocomplete(&state.world, doc, &source_clone, args.cursor, args.explicit)
+    else {
         return Ok(JsValue::NULL);
     };
 
@@ -271,7 +304,9 @@ pub struct TooltipArgs {
     #[serde(default = "default_side")]
     pub side: i8,
 }
-fn default_side() -> i8 { 1 }
+fn default_side() -> i8 {
+    1
+}
 
 #[derive(Serialize)]
 pub struct TooltipResponse {
@@ -310,7 +345,11 @@ pub fn tooltip(state: &mut State, args: JsValue) -> Result<JsValue, String> {
 }
 
 fn typst_side(side: i8) -> Side {
-    if side < 0 { Side::Before } else { Side::After }
+    if side < 0 {
+        Side::Before
+    } else {
+        Side::After
+    }
 }
 
 fn escape_html(s: &str) -> String {
@@ -434,8 +473,12 @@ pub struct JumpClickArgs {
 
 pub fn jump_from_click(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     let args: JumpClickArgs = from_js(args)?;
-    let Some(doc) = state.last_document.as_ref() else { return Ok(JsValue::NULL) };
-    let Some(page) = doc.pages.get(args.index) else { return Ok(JsValue::NULL) };
+    let Some(doc) = state.last_document.as_ref() else {
+        return Ok(JsValue::NULL);
+    };
+    let Some(page) = doc.pages.get(args.index) else {
+        return Ok(JsValue::NULL);
+    };
 
     let point = typst::layout::Point::new(
         typst::layout::Abs::pt(args.x),

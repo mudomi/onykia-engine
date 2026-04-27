@@ -97,7 +97,10 @@ struct CreateArgs {
 }
 fn handle_create(state: &mut State, args: JsValue) -> Result<(), String> {
     let args: CreateArgs = from_js(args)?;
-    state.world.vfs.create(args.path, args.mime, args.data.into_vec());
+    state
+        .world
+        .vfs
+        .create(args.path, args.mime, args.data.into_vec());
     Ok(())
 }
 
@@ -148,8 +151,8 @@ struct SetTargetArgs {
 }
 fn handle_set_target(state: &mut State, args: JsValue) -> Result<(), String> {
     let args: SetTargetArgs = from_js(args)?;
-    state.target = Target::from_str(&args.target)
-        .ok_or_else(|| format!("unknown target: {}", args.target))?;
+    state.target =
+        Target::from_str(&args.target).ok_or_else(|| format!("unknown target: {}", args.target))?;
     Ok(())
 }
 
@@ -202,7 +205,9 @@ struct AddFontsArgs {
 }
 fn handle_add_fonts(state: &mut State, args: JsValue) -> Result<(), String> {
     let args: AddFontsArgs = from_js(args)?;
-    state.world.add_fonts(args.fonts.into_iter().map(|b| b.into_vec()).collect());
+    state
+        .world
+        .add_fonts(args.fonts.into_iter().map(|b| b.into_vec()).collect());
     Ok(())
 }
 
@@ -225,4 +230,3 @@ fn handle_unsubscribe(state: &mut State, args: JsValue) -> Result<(), String> {
     state.subscriptions.remove(&args.name);
     Ok(())
 }
-

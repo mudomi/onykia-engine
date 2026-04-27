@@ -37,20 +37,30 @@ pub fn export(state: &mut State, args: JsValue) -> Result<JsValue, String> {
             let options = typst_pdf::PdfOptions::default();
             let bytes = typst_pdf::pdf(doc, &options)
                 .map_err(|errs| format!("pdf: {} error(s)", errs.len()))?;
-            ExportResponse { data: bytes, mime: "application/pdf" }
+            ExportResponse {
+                data: bytes,
+                mime: "application/pdf",
+            }
         }
         ExportArgs::Svg => {
             // `svg_merged` writes all pages into a single SVG document.
             let svg = typst_svg::svg_merged(doc, typst::layout::Abs::pt(0.0));
-            ExportResponse { data: svg.into_bytes(), mime: "image/svg+xml" }
+            ExportResponse {
+                data: svg.into_bytes(),
+                mime: "image/svg+xml",
+            }
         }
         ExportArgs::Png { ppi } => {
             let page = doc.pages.first().ok_or_else(|| "no pages".to_string())?;
             let ppi = ppi.unwrap_or(144.0);
             let pixmap = typst_render::render(page, ppi / 72.0);
-            let png =
-                pixmap.encode_png().map_err(|e| format!("png encode: {e}"))?;
-            ExportResponse { data: png, mime: "image/png" }
+            let png = pixmap
+                .encode_png()
+                .map_err(|e| format!("png encode: {e}"))?;
+            ExportResponse {
+                data: png,
+                mime: "image/png",
+            }
         }
         ExportArgs::Html => {
             return Err("html export not yet implemented in onykia-engine".into());
