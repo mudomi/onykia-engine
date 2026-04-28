@@ -14,3 +14,8 @@ example/public/assets/*
 # Logs
 *.log
 npm-debug.log*
+
+# Per-package license files — copied from repo root at publish time
+packages/*/LICENSE
+packages/*/NOTICE
+packages/*/THIRD-PARTY-LICENSES.txt
