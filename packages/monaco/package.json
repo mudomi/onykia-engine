@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "monaco-editor": "^0.52.0",
-    "@mudomi/onykia-engine": "^0.1.0",
+    "@mudomi/onykia-engine": ">=0.1.0-0",
     "typescript": "^5.6.0"
   }
 }
