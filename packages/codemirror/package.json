@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "type": "module",
   "description": "CodeMirror 6 bindings for @mudomi/onykia-engine.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mudomi/onykia-engine.git",
+    "directory": "packages/codemirror"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
