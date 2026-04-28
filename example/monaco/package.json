@@ -10,8 +10,8 @@
     "check": "tsc"
   },
   "dependencies": {
-    "@mudomi/onykia-engine": "^0.1.0",
-    "@mudomi/onykia-monaco": "^0.1.0",
+    "@mudomi/onykia-engine": ">=0.1.0-0",
+    "@mudomi/onykia-monaco": ">=0.1.0-0",
     "monaco-editor": "^0.52.0"
   },
   "devDependencies": {
