@@ -16,7 +16,8 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "src"],
+  "license": "MIT",
+  "files": ["dist", "src", "LICENSE", "NOTICE", "THIRD-PARTY-LICENSES.txt"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch"
