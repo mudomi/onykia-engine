@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Editor-agnostic Typst engine: worker pool, message bus, and IDE-feature client.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mudomi/onykia-engine.git",
+    "directory": "packages/engine"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
