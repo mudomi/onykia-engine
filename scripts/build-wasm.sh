@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
-# Build onykia-engine's WASM binary + wasm-bindgen glue into example/public/assets.
+# Build the WASM + wasm-bindgen glue into packages/engine/dist/wasm/
+# (shipped in the npm tarball) and mirror to example/public/assets/.
 #
-# Requires: rustup with the toolchain pinned in rust-toolchain.toml, and
-# wasm-bindgen-cli matching the wasm-bindgen crate version in Cargo.toml.
-#
-# Flags:
-#   --debug     Use the debug profile (faster build, slower runtime).
-#   --threads   Build with atomics + shared memory. Requires the rayon /
-#               parking_lot patches noted in src/rust/Cargo.toml.
+# Flags: --debug, --threads (see src/rust/Cargo.toml for thread setup).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,8 +15,12 @@ for arg in "$@"; do
   esac
 done
 
-OUT_DIR=example/public/assets
-find "$OUT_DIR" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
+OUT_DIR=packages/engine/dist/wasm
+EXAMPLE_DIR=example/public/assets
+
+mkdir -p "$OUT_DIR"
+find "$OUT_DIR" -mindepth 1 -exec rm -rf {} +
+find "$EXAMPLE_DIR" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
 
 CARGO_FLAGS=()
 RUSTFLAGS=
@@ -46,4 +45,8 @@ sed -i "s|onykia_engine_bg\.wasm|onykia_engine.wasm|g" "$OUT_DIR"/onykia_engine.
 
 cp src/rust/js/worker.js "$OUT_DIR"/onykia_worker.js
 
-echo "Built $OUT_DIR/onykia_engine.wasm"
+# Mirror the artefacts into the example dev server's public assets so
+# `npm run example:*` keeps working without a separate build step.
+cp -r "$OUT_DIR"/. "$EXAMPLE_DIR"/
+
+echo "Built $OUT_DIR/onykia_engine.wasm (mirrored to $EXAMPLE_DIR/)"

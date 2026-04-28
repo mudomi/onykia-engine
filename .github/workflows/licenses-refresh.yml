@@ -1,0 +1,68 @@
+name: Refresh THIRD-PARTY-LICENSES
+
+# Auto-refresh THIRD-PARTY-LICENSES.txt whenever the dependency graph
+# changes. Runs after a Cargo.lock change lands on develop and opens a
+# PR if the regenerated file differs from the committed one. Also
+# runs weekly as a safety net for upstream typst-assets NOTICE
+# updates and SPDX-text drift.
+#
+# The CI workflow's `licenses` job is the gate that blocks merging
+# stale files; this workflow exists so the work is automatic.
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'Cargo.lock'
+      - 'src/rust/Cargo.toml'
+      - 'about.toml'
+      - 'scripts/update-licenses.sh'
+      - 'scripts/render_licenses.py'
+      - 'scripts/license-appendix.txt'
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: licenses-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+
+      - name: Regenerate THIRD-PARTY-LICENSES.txt
+        run: bash scripts/update-licenses.sh
+
+      - name: Open PR if file changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/refresh-licenses
+          base: develop
+          commit-message: 'chore: refresh THIRD-PARTY-LICENSES.txt'
+          title: 'chore: refresh THIRD-PARTY-LICENSES.txt'
+          body: |
+            Automated regeneration of THIRD-PARTY-LICENSES.txt.
+
+            Triggered by a change to the Rust dependency graph
+            (Cargo.lock / Cargo.toml / about.toml / generator scripts)
+            or by the weekly schedule. Review the diff and merge if it
+            matches expectations.
+          labels: dependencies,licensing
+          delete-branch: true

@@ -63,6 +63,12 @@ jobs:
             npm version "$V" --no-git-tag-version --workspace "./$pkg" --allow-same-version
           done
 
+      - name: Copy license files into each package
+        run: |
+          for pkg in packages/engine packages/codemirror packages/monaco; do
+            cp LICENSE NOTICE THIRD-PARTY-LICENSES.txt "$pkg/"
+          done
+
       - name: Publish to npm (dev tag)
         run: |
           npm publish --workspace ./packages/engine     --access public --tag dev --provenance

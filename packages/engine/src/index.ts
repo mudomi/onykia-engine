@@ -1,4 +1,5 @@
 export { Core } from './core.js';
+export { defaultWasmFactory } from './wasm.js';
 export type { CoreOptions } from './core.js';
 export type {
   ExportTarget,

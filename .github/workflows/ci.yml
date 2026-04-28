@@ -64,3 +64,22 @@ jobs:
 
       - name: Build WASM
         run: bash scripts/build-wasm.sh
+
+  licenses:
+    name: THIRD-PARTY-LICENSES freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+
+      - name: Verify THIRD-PARTY-LICENSES.txt is up to date
+        run: bash scripts/update-licenses.sh --check
