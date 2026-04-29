@@ -4,7 +4,7 @@ Thank you for considering to help out!
 
 ## Flow
 
-0. Discuss a feature or issue in a issue before creating a pull-request.
+0. Discuss a feature or issue in an Github issue before creating a pull-request.
 1. Fork this repo.
 2. Create a branch in your fork.
 3. Open a PR to `develop`.
