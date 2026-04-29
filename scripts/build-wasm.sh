@@ -2,16 +2,14 @@
 # Build the WASM + wasm-bindgen glue into packages/engine/dist/wasm/
 # (shipped in the npm tarball) and mirror to example/public/assets/.
 #
-# Flags: --debug, --threads (see src/rust/Cargo.toml for thread setup).
+# Flags: --debug
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PROFILE=release
-THREADED=0
 for arg in "$@"; do
   case "$arg" in
-    --debug)   PROFILE=debug ;;
-    --threads) THREADED=1 ;;
+    --debug) PROFILE=debug ;;
   esac
 done
 
@@ -23,16 +21,9 @@ find "$OUT_DIR" -mindepth 1 -exec rm -rf {} +
 find "$EXAMPLE_DIR" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
 
 CARGO_FLAGS=()
-RUSTFLAGS=
 [[ $PROFILE == release ]] && CARGO_FLAGS+=(--release)
-if [[ $THREADED == 1 ]]; then
-  RUSTFLAGS="-C target-feature=+atomics,+bulk-memory,+mutable-globals"
-  # build-std needed because pre-built libstd lacks atomics-enabled variants.
-  CARGO_FLAGS+=(-Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort)
-fi
 
-RUSTFLAGS="$RUSTFLAGS" \
-  cargo build --target wasm32-unknown-unknown -p onykia_core "${CARGO_FLAGS[@]}"
+cargo build --target wasm32-unknown-unknown -p onykia_core "${CARGO_FLAGS[@]}"
 
 wasm-bindgen --target web --out-dir "$OUT_DIR" --out-name onykia_engine \
   "target/wasm32-unknown-unknown/$PROFILE/onykia_core.wasm"

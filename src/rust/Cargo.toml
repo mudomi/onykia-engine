@@ -49,4 +49,3 @@ getrandom = { version = "0.2", features = ["js"] }
 [features]
 default = ["panic-hook"]
 panic-hook = ["dep:console_error_panic_hook"]
-# Threaded WASM builds need a [patch.crates-io] block — see docs/notes/Threaded-WASM.md.
