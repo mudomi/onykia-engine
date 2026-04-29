@@ -1323,6 +1323,7 @@ dependencies = [
  "typst",
  "typst-assets",
  "typst-eval",
+ "typst-html",
  "typst-ide",
  "typst-library",
  "typst-pdf",

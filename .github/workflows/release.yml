@@ -66,10 +66,10 @@ jobs:
       - name: Build TS packages
         run: npm run build:ts
 
-      - name: Copy license files into each package
+      - name: Copy license and readme files into each package
         run: |
           for pkg in packages/engine packages/codemirror packages/monaco; do
-            cp LICENSE NOTICE THIRD-PARTY-LICENSES.txt "$pkg/"
+            cp LICENSE NOTICE THIRD-PARTY-LICENSES.txt README.md "$pkg/"
           done
 
       - name: Publish to npm (latest tag)

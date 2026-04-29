@@ -10,6 +10,7 @@ use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
 use typst::{Library, LibraryExt, World};
 use typst_ide::IdeWorld;
+use typst_library::{Feature, Features};
 
 use crate::vfs::Vfs;
 
@@ -45,7 +46,12 @@ impl OnykiaWorld {
             vfs: Vfs::new(),
             main_path: None,
             today: None,
-            library: LazyHash::new(Library::builder().build()),
+            // Enable Feature::Html
+            library: LazyHash::new(
+                Library::builder()
+                    .with_features(Features::from_iter([Feature::Html]))
+                    .build(),
+            ),
             fonts: LazyHash::new(book),
             font_slots,
         }

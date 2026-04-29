@@ -1,6 +1,8 @@
 //! Export / render / archive handlers.
 
 use serde::{Deserialize, Serialize};
+use typst::layout::PagedDocument;
+use typst_html::HtmlDocument;
 use wasm_bindgen::prelude::*;
 
 use crate::protocol::{from_js, to_js};
@@ -26,48 +28,73 @@ pub struct ExportResponse {
 }
 
 pub fn export(state: &mut State, args: JsValue) -> Result<JsValue, String> {
-    let doc = state
-        .last_document
-        .as_ref()
-        .ok_or_else(|| "no document compiled".to_string())?;
     let args: ExportArgs = from_js(args)?;
 
     let response = match args {
-        ExportArgs::Pdf => {
-            let options = typst_pdf::PdfOptions::default();
-            let bytes = typst_pdf::pdf(doc, &options)
-                .map_err(|errs| format!("pdf: {} error(s)", errs.len()))?;
-            ExportResponse {
-                data: bytes,
-                mime: "application/pdf",
-            }
-        }
-        ExportArgs::Svg => {
-            // `svg_merged` writes all pages into a single SVG document.
-            let svg = typst_svg::svg_merged(doc, typst::layout::Abs::pt(0.0));
-            ExportResponse {
-                data: svg.into_bytes(),
-                mime: "image/svg+xml",
-            }
-        }
-        ExportArgs::Png { ppi } => {
-            let page = doc.pages.first().ok_or_else(|| "no pages".to_string())?;
-            let ppi = ppi.unwrap_or(144.0);
-            let pixmap = typst_render::render(page, ppi / 72.0);
-            let png = pixmap
-                .encode_png()
-                .map_err(|e| format!("png encode: {e}"))?;
-            ExportResponse {
-                data: png,
-                mime: "image/png",
-            }
-        }
-        ExportArgs::Html => {
-            return Err("html export not yet implemented in onykia-engine".into());
-        }
+        ExportArgs::Pdf => export_pdf(require_paged(state)?)?,
+        ExportArgs::Svg => export_svg(require_paged(state)?),
+        ExportArgs::Png { ppi } => export_png(require_paged(state)?, ppi)?,
+        ExportArgs::Html => export_html(state)?,
     };
 
     to_js(&response)
+}
+
+fn require_paged(state: &State) -> Result<&PagedDocument, String> {
+    state
+        .last_document
+        .as_ref()
+        .ok_or_else(|| "no document compiled".to_string())
+}
+
+fn export_pdf(doc: &PagedDocument) -> Result<ExportResponse, String> {
+    let options = typst_pdf::PdfOptions::default();
+    let bytes =
+        typst_pdf::pdf(doc, &options).map_err(|errs| format!("pdf: {} error(s)", errs.len()))?;
+    Ok(ExportResponse {
+        data: bytes,
+        mime: "application/pdf",
+    })
+}
+
+fn export_svg(doc: &PagedDocument) -> ExportResponse {
+    // svg_merged writes all pages into a single SVG document.
+    let svg = typst_svg::svg_merged(doc, typst::layout::Abs::pt(0.0));
+    ExportResponse {
+        data: svg.into_bytes(),
+        mime: "image/svg+xml",
+    }
+}
+
+// Default DPI matches typst CLI's default for raster export.
+const DEFAULT_PNG_PPI: f32 = 144.0;
+// Typst's render pixels-per-pt unit; 72 pt = 1 inch.
+const PT_PER_INCH: f32 = 72.0;
+
+fn export_png(doc: &PagedDocument, ppi: Option<f32>) -> Result<ExportResponse, String> {
+    let page = doc.pages.first().ok_or_else(|| "no pages".to_string())?;
+    let pixels_per_pt = ppi.unwrap_or(DEFAULT_PNG_PPI) / PT_PER_INCH;
+    let pixmap = typst_render::render(page, pixels_per_pt);
+    let png = pixmap
+        .encode_png()
+        .map_err(|e| format!("png encode: {e}"))?;
+    Ok(ExportResponse {
+        data: png,
+        mime: "image/png",
+    })
+}
+
+// HtmlDocument has a different layout than PagedDocument, so the cached
+// `state.last_document` is unusable here - compile fresh on demand.
+fn export_html(state: &State) -> Result<ExportResponse, String> {
+    let doc = typst::compile::<HtmlDocument>(&state.world)
+        .output
+        .map_err(|errs| format!("html: {} error(s)", errs.len()))?;
+    let html = typst_html::html(&doc).map_err(|errs| format!("html: {} error(s)", errs.len()))?;
+    Ok(ExportResponse {
+        data: html.into_bytes(),
+        mime: "text/html",
+    })
 }
 
 // ─── render() ────────────────────────────────────────────────────────────
@@ -87,10 +114,7 @@ pub struct RenderResponse {
 
 pub fn render(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     let args: RenderArgs = from_js(args)?;
-    let doc = state
-        .last_document
-        .as_ref()
-        .ok_or_else(|| "no document compiled".to_string())?;
+    let doc = require_paged(state)?;
     let page = doc
         .pages
         .get(args.index)
