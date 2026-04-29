@@ -43,8 +43,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          components: rust-src, rustfmt, clippy
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
 
@@ -73,7 +74,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          toolchain: stable
 
       - uses: Swatinem/rust-cache@v2
 
