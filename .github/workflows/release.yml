@@ -47,8 +47,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          components: rust-src
+          toolchain: stable
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
 
