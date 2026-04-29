@@ -21,7 +21,7 @@
     }
   },
   "license": "MIT",
-  "files": ["dist", "src", "LICENSE", "NOTICE", "THIRD-PARTY-LICENSES.txt"],
+  "files": ["dist", "README.md", "LICENSE", "NOTICE", "THIRD-PARTY-LICENSES.txt"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch"
