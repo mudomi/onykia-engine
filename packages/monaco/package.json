@@ -1,6 +1,6 @@
 {
   "name": "@mudomi/onykia-monaco",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Monaco editor bindings for @mudomi/onykia-engine.",
   "repository": {
@@ -17,7 +17,13 @@
     }
   },
   "license": "MIT",
-  "files": ["dist", "src", "LICENSE", "NOTICE", "THIRD-PARTY-LICENSES.txt"],
+  "files": [
+    "dist",
+    "src",
+    "LICENSE",
+    "NOTICE",
+    "THIRD-PARTY-LICENSES.txt"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -p tsconfig.json --watch"
