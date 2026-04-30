@@ -31,6 +31,7 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
+    environment: npm-publish
     permissions:
       contents: read
       id-token: write
@@ -41,9 +42,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
+          node-version: 22
           cache: npm
+
+      - name: Upgrade npm
+        run: npm install -g npm@latest
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -72,10 +75,8 @@ jobs:
             cp LICENSE NOTICE THIRD-PARTY-LICENSES.txt README.md "$pkg/"
           done
 
-      - name: Publish to npm (latest tag)
+      - name: Publish to npm (OIDC trusted publishing)
         run: |
-          npm publish --workspace ./packages/engine     --access public --provenance
-          npm publish --workspace ./packages/codemirror --access public --provenance
-          npm publish --workspace ./packages/monaco     --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --workspace ./packages/engine     --access public
+          npm publish --workspace ./packages/codemirror --access public
+          npm publish --workspace ./packages/monaco     --access public
