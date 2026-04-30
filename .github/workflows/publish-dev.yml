@@ -72,8 +72,8 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: |
-          npm publish --workspace ./packages/engine     --access public
-          npm publish --workspace ./packages/codemirror --access public
-          npm publish --workspace ./packages/monaco     --access public
+          npm publish --workspace ./packages/engine     --access public --tag dev
+          npm publish --workspace ./packages/codemirror --access public --tag dev
+          npm publish --workspace ./packages/monaco     --access public --tag dev
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
