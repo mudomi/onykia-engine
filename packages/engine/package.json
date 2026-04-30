@@ -1,6 +1,6 @@
 {
   "name": "@mudomi/onykia-engine",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Editor-agnostic Typst engine: worker pool, message bus, and IDE-feature client.",
   "repository": {
