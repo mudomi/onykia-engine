@@ -20,6 +20,7 @@ export default {
       {
         assets: [
           'CHANGELOG.md',
+          'package.json',
           'package-lock.json',
           'packages/*/package.json',
         ],
