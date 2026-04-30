@@ -28,7 +28,12 @@ When it's release time, maintainers promote `develop` to `release`.
 ## Versioning and builds
 
 **Dev builds:**
-- Automatically built and published to npm with a `dev` tag on every commit to `develop`.
+- Automatic dev builds are published to GitHub Packages on `develop`.
+- To consume them, add a project-local `.npmrc`:
+  ```
+  @mudomi:registry=https://npm.pkg.github.com
+  ```
+  Note: this routes **all** `@mudomi/*` lookups in that project to GitHub.
 
 **Release:**
 
