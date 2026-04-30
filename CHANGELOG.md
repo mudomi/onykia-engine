@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/mudomi/onykia-engine/compare/v0.2.1...v0.2.2) (2026-04-30)
+
+
+### Bug Fixes
+
+* tryfix ci release ([#19](https://github.com/mudomi/onykia-engine/issues/19)) ([ce148e0](https://github.com/mudomi/onykia-engine/commit/ce148e03968936ca19d37a31ba11eb9545f50517))
+
 ## [0.2.1](https://github.com/mudomi/onykia-engine/compare/v0.2.0...v0.2.1) (2026-04-30)
 
 
