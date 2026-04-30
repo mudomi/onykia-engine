@@ -2,6 +2,8 @@
 
 Typst compiled to WebAssembly for the web with nice bindings for IDEs and more.
 
+Used in [`onykia-editor`](https://github.com/mudomi/onykia-editor) and [`onykia-app`](https://github.com/mudomi/onykia-app).
+
 ## Packages
 
 | npm | what |
@@ -28,7 +30,9 @@ npm run example:codemirror   # or example:monaco
 ## Known gaps
 
 - **Outline** notifications are stubbed.
-- **HTML export** and **archive()** are stubbed.
+- **archive()** is stubbed.
+- **SVG export** is merged all-pages only; no per-page SVG.
+- **PNG export** via `export` is first-page only (`render` accepts an index).
 - **Font index** decoder only accepts JSON.
 - **Spellcheck** is delegated to JS; no built-in hunspell.
 - **Monaco binding** supports only edits + diagnostics - no syntax highlight,
@@ -36,4 +40,6 @@ npm run example:codemirror   # or example:monaco
 
 ## More
 
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) - branch flow, PRs, releases.
+For contributions & release flow see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+This package bundles [Typst](https://github.com/typst/typst), licensed under the Apache License 2.0. The code in this package is MIT licensed. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
