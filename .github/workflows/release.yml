@@ -60,17 +60,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Fast-forward `develop` to `release` for version bump
+  # Fast-forward `develop` to `release` so the version-bump commit
+  # semantic-release landed on `release` flows back. Uses BACKMERGE_TOKEN
+  # (a fine-grained PAT) instead of GITHUB_TOKEN because the latter is
+  # the github-actions[bot] identity, which can't be granted ruleset
+  # bypass on `develop`. The PAT's owning user is on the bypass list.
   back-merge:
     needs: release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: develop
           fetch-depth: 0
+          token: ${{ secrets.BACKMERGE_TOKEN }}
       - name: Fast-forward develop to release
         run: |
           git fetch origin release
