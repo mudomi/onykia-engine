@@ -28,6 +28,13 @@ jobs:
           node-version: 24
           cache: npm
 
+      # semantic-release v24 transitively installs npm@10.
+      # npm 10 does not support trusted publishing OIDC)
+      # so installing it here
+      - name: Resolve system npm path
+        id: sysnpm
+        run: echo "path=$(which npm)" >> "$GITHUB_OUTPUT"
+
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
@@ -59,6 +66,7 @@ jobs:
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SYSTEM_NPM: ${{ steps.sysnpm.outputs.path }}
 
   # Fast-forward `develop` to `release` so the version-bump commit
   # semantic-release landed on `release` flows back. Uses BACKMERGE_TOKEN
