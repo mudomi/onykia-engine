@@ -8,43 +8,27 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
-
 jobs:
-  release-please:
-    runs-on: ubuntu-latest
-    outputs:
-      releases_created: ${{ steps.rp.outputs.releases_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
-    steps:
-      - uses: googleapis/release-please-action@v4
-        id: rp
-        with:
-          config-file: .github/release-please-config.json
-          manifest-file: .github/.release-please-manifest.json
-          target-branch: release
-
-  publish:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+  release:
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
-      contents: read
-      id-token: write
+      contents: write       # tag + push release commit
+      issues: write         # semantic-release issue comments
+      pull-requests: write  # semantic-release PR comments
+      id-token: write       # npm OIDC trusted publishing
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
+          persist-credentials: true
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
+      # Trusted publishing requires npm CLI >= 11.5.1.
       - name: Upgrade npm
         run: npm install -g npm@latest
 
@@ -75,8 +59,24 @@ jobs:
             cp LICENSE NOTICE THIRD-PARTY-LICENSES.txt README.md "$pkg/"
           done
 
-      - name: Publish to npm (OIDC trusted publishing)
+      - name: semantic-release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Fast-forward `develop` to `release` for version bump
+  back-merge:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - name: Fast-forward develop to release
         run: |
-          npm publish --workspace ./packages/engine     --access public
-          npm publish --workspace ./packages/codemirror --access public
-          npm publish --workspace ./packages/monaco     --access public
+          git fetch origin release
+          git merge --ff-only origin/release
+          git push origin develop

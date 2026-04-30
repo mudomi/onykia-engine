@@ -1,0 +1,31 @@
+export default {
+  branches: ['release'],
+  plugins: [
+    '@semantic-release/commit-analyzer',
+    '@semantic-release/release-notes-generator',
+    ['@semantic-release/changelog', { changelogFile: 'CHANGELOG.md' }],
+    [
+      '@semantic-release/exec',
+      {
+        prepareCmd: 'node scripts/sync-version.mjs ${nextRelease.version}',
+        publishCmd: [
+          'npm publish --workspace ./packages/engine     --access public',
+          'npm publish --workspace ./packages/codemirror --access public',
+          'npm publish --workspace ./packages/monaco     --access public',
+        ].join(' && '),
+      },
+    ],
+    [
+      '@semantic-release/git',
+      {
+        assets: [
+          'CHANGELOG.md',
+          'package-lock.json',
+          'packages/*/package.json',
+        ],
+        message: 'chore(release): ${nextRelease.version}\n\n${nextRelease.notes}',
+      },
+    ],
+    '@semantic-release/github',
+  ],
+};
