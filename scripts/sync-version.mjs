@@ -8,6 +8,11 @@ if (!version) {
   process.exit(1);
 }
 
+execSync(
+  `npm version ${version} --no-git-tag-version --allow-same-version`,
+  { stdio: 'inherit' },
+);
+
 const workspaces = [
   'packages/engine',
   'packages/codemirror',
