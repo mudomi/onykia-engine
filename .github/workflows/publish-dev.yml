@@ -63,7 +63,7 @@ jobs:
         run: |
           V="${{ steps.devver.outputs.version }}"
           for pkg in packages/engine packages/codemirror packages/monaco; do
-            npm version "$V" --no-git-tag-version --workspace "./$pkg" --allow-same-version
+            npm version "$V" --no-git-tag-version --workspace "./$pkg" --allow-same-version --workspaces-update=false
           done
 
       - name: Copy license and readme files into each package
