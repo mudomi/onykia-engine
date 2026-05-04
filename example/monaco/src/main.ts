@@ -18,7 +18,7 @@ const previewEl = document.getElementById('preview')!;
 const model = monaco.editor.createModel(INITIAL, 'plaintext');
 monaco.editor.create(editorEl, { model, automaticLayout: true, minimap: { enabled: false } });
 
-const core = createEngine();
+const core = await createEngine();
 await primeFile(core, model, PATH);
 bindTypst(core, model, PATH);
 

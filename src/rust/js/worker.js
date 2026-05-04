@@ -1,39 +1,59 @@
-// Worker shim: imports the wasm-bindgen loader, initialises with shared
-// memory, then forwards messages between the main thread and the Rust
-// state machine. Copied verbatim into example/public/assets/onykia_worker.js
-// by scripts/build-wasm.sh.
+// Driver worker. Loads the WASM module against the main thread's shared
+// memory, bootstraps the rayon thread pool via wasm-bindgen-rayon, then
+// services dispatch + supply messages.
+import init, * as wasm from './onykia_engine.js';
 
-import init, { State, main, handle, accept, accept_error } from './onykia_engine.js';
+let state = null;
 
-self.onmessage = async (event) => {
+self.onmessage = onBoot;
+
+async function onBoot(event) {
   const msg = event.data;
-  if (msg.tag !== 'init') return;
+  if (msg?.tag !== 'boot') return;
 
   try {
     await init({ module: msg.module, memory: msg.memory });
+
+    // Resolved by the wasm-bindgen `module = "/js/bridge.js"` imports.
+    self.__onykia = {
+      postResult:  (id, response)        => self.postMessage({ tag: 'result',  id, response }),
+      postFailure: (id, error)           => self.postMessage({ tag: 'result',  id, error }),
+      postSignal:  (channel, payload)    => self.postMessage({ tag: 'signal',  channel, payload }),
+      postFetch:   (id, resource, args)  => self.postMessage({ tag: 'fetch',   id, resource, args }),
+    };
+
+    wasm.bootstrap();
+    state = new wasm.State();
+    await wasm.initThreadPool(msg.threads);
   } catch (err) {
-    self.postMessage({ tag: 'ready', id: msg.id, error: String(err) });
+    self.postMessage({ tag: 'online', error: String(err) });
     return;
   }
 
-  self.onykiaBridge = {
-    postResponse:     (id, response)       => self.postMessage({ tag: 'response',     id, response }),
-    postError:        (id, error)          => self.postMessage({ tag: 'response',     id, error }),
-    postNotification: (name, notification) => self.postMessage({ tag: 'notification', name, notification }),
-    postAsk:          (id, name, args)     => self.postMessage({ tag: 'ask',          id, name, args }),
-  };
+  self.onmessage = onRunning;
+  self.postMessage({ tag: 'online' });
+}
 
-  self.__state = new State();
-  main(msg.id, msg.numThreads);
+function onRunning(event) {
+  const m = event.data;
+  switch (m.tag) {
+    case 'call':
+      try { wasm.dispatch_call(state, m.id, m.name, m.args); }
+      catch (err) { crash(err); }
+      return;
+    case 'supply':
+      if (m.failure !== undefined) wasm.supply_failure(m.id, m.failure);
+      else wasm.supply_bytes(m.id, m.bytes);
+      return;
+  }
+}
 
-  self.onmessage = (e) => {
-    const m = e.data;
-    if (m.tag === 'request') {
-      handle(self.__state, m.id, m.name, m.args);
-    } else if (m.tag === 'accept') {
-      if (m.error) accept_error(m.id, m.error);
-      else accept(m.id, m.output);
-    }
-  };
-  self.postMessage({ tag: 'ready', id: msg.id });
-};
+function crash(err) {
+  console.error('[onykia/driver]', err);
+  self.onmessage = null;
+  self.postMessage({
+    tag: 'signal',
+    channel: 'status',
+    payload: { status: 'crashed', message: err instanceof Error ? err.message : String(err) },
+  });
+}

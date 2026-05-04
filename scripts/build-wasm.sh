@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Build the WASM + wasm-bindgen glue into packages/engine/dist/wasm/
-# (shipped in the npm tarball) and mirror to example/public/assets/.
+# Build the threaded Onykia WASM into packages/engine/dist/wasm/ (npm tarball)
+# and mirror to example/public/assets/.
 #
-# Flags: --debug
+
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -10,34 +10,52 @@ PROFILE=release
 for arg in "$@"; do
   case "$arg" in
     --debug) PROFILE=debug ;;
+    *) echo "unknown flag: $arg" >&2; exit 1 ;;
   esac
 done
 
-OUT_DIR=packages/engine/dist/wasm
-EXAMPLE_DIR=example/public/assets
+OUT=packages/engine/dist/wasm
+EXAMPLE=example/public/assets
+WORKER_SHIM=src/rust/js/worker.js
 
-mkdir -p "$OUT_DIR"
-find "$OUT_DIR" -mindepth 1 -exec rm -rf {} +
-find "$EXAMPLE_DIR" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
+mkdir -p "$OUT"
+find "$OUT" -mindepth 1 -exec rm -rf {} +
+find "$EXAMPLE" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
 
-CARGO_FLAGS=()
-[[ $PROFILE == release ]] && CARGO_FLAGS+=(--release)
+cargo_flags=()
+[[ $PROFILE == release ]] && cargo_flags+=(--release)
 
-cargo build --target wasm32-unknown-unknown -p onykia_core "${CARGO_FLAGS[@]}"
+rustup toolchain install nightly --profile minimal --component rust-src --target wasm32-unknown-unknown >/dev/null
 
-wasm-bindgen --target web --out-dir "$OUT_DIR" --out-name onykia_engine \
-  "target/wasm32-unknown-unknown/$PROFILE/onykia_core.wasm"
+# Atomics + shared memory + TLS exports required by wasm-bindgen-rayon 1.3.
+# +mutable-globals was dropped upstream in 1.3.0 and is no longer needed.
+RUSTFLAGS="-C target-feature=+atomics,+bulk-memory \
+  -C link-arg=--shared-memory -C link-arg=--max-memory=1073741824 -C link-arg=--import-memory \
+  -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size \
+  -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base"
 
-# wasm-bindgen always appends `_bg` to the binary's basename. Drop it so
-# the artefact ships as plain `onykia_engine.wasm` and patch the loader.
-mv "$OUT_DIR"/onykia_engine_bg.wasm      "$OUT_DIR"/onykia_engine.wasm
-mv "$OUT_DIR"/onykia_engine_bg.wasm.d.ts "$OUT_DIR"/onykia_engine.wasm.d.ts
-sed -i "s|onykia_engine_bg\.wasm|onykia_engine.wasm|g" "$OUT_DIR"/onykia_engine.js
+target_dir="target/wasm32-unknown-unknown/$PROFILE"
 
-cp src/rust/js/worker.js "$OUT_DIR"/onykia_worker.js
+RUSTUP_TOOLCHAIN=nightly RUSTFLAGS="$RUSTFLAGS" \
+  cargo build --target wasm32-unknown-unknown -p onykia_core "${cargo_flags[@]}" \
+    -Z build-std=panic_abort,std
 
-# Mirror the artefacts into the example dev server's public assets so
-# `npm run example:*` keeps working without a separate build step.
-cp -r "$OUT_DIR"/. "$EXAMPLE_DIR"/
+wasm-bindgen --target web --out-dir "$OUT" --out-name onykia_engine \
+  "$target_dir/onykia_core.wasm"
 
-echo "Built $OUT_DIR/onykia_engine.wasm (mirrored to $EXAMPLE_DIR/)"
+# wasm-bindgen suffixes the binary with `_bg`; drop it and patch the loader.
+mv "$OUT"/onykia_engine_bg.wasm      "$OUT"/onykia_engine.wasm
+mv "$OUT"/onykia_engine_bg.wasm.d.ts "$OUT"/onykia_engine.wasm.d.ts
+sed -i "s|onykia_engine_bg\.wasm|onykia_engine.wasm|g" "$OUT"/onykia_engine.js
+
+# wasm-bindgen-rayon's workerHelpers.js dynamically imports the parent entry
+# as `'../../..'` — bundler-style directory resolution. Native browser ESM
+# (and Vite's static asset path) won't resolve that, so the rayon worker pool
+# fails to boot. Rewrite to the actual entry file.
+find "$OUT/snippets" -name workerHelpers.js -exec \
+  sed -i "s|import('../../..')|import('../../../onykia_engine.js')|g" {} +
+
+cp "$WORKER_SHIM" "$OUT"/onykia_worker.js
+cp -r "$OUT"/. "$EXAMPLE"/
+
+echo "Built $OUT/onykia_engine.wasm"

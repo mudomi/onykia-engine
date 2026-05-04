@@ -8,7 +8,7 @@ mod notify;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
-use crate::protocol::{from_js, post_error, post_response};
+use crate::protocol::{from_js, post_failure, post_result};
 use crate::state::{State, Target};
 
 pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
@@ -65,8 +65,8 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
     }
 
     match result {
-        Ok(value) => post_response(id, value),
-        Err(err) => post_error(id, &err),
+        Ok(value) => post_result(id, value),
+        Err(err) => post_failure(id, &err),
     }
 }
 

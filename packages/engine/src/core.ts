@@ -193,16 +193,15 @@ export class Core {
   }
 
   async jumpFromCursor(path: string, cursor: number): Promise<JumpResult[]> {
-    const result = await this.handler.dispatch<JumpResult[] | JumpResult | null>('jumpFromCursor', {
+    const out = await this.handler.dispatch<JumpResult[] | null>('jumpFromCursor', {
       path,
       cursor,
     });
-    if (Array.isArray(result)) return result;
-    return result == null ? [] : [result];
+    return out ?? [];
   }
 
-  jumpFromClick(args: { kind?: 'paged'; index: number; x: number; y: number }): Promise<JumpResult | null> {
-    return this.handler.dispatch('jumpFromClick', { kind: 'paged', ...args });
+  jumpFromClick(args: { index: number; x: number; y: number }): Promise<JumpResult | null> {
+    return this.handler.dispatch('jumpFromClick', args);
   }
 
   // ─── export ────────────────────────────────────────────────────────────

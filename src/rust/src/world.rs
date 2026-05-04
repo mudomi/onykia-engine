@@ -26,23 +26,7 @@ pub struct OnykiaWorld {
 
 impl OnykiaWorld {
     pub fn new() -> Self {
-        let mut book = FontBook::new();
-        let mut font_slots: Vec<Font> = Vec::new();
-
-        for data in typst_assets::fonts() {
-            let bytes = Bytes::new(data.to_vec());
-            for face_idx in 0u32.. {
-                match Font::new(bytes.clone(), face_idx) {
-                    Some(font) => {
-                        book.push(font.info().clone());
-                        font_slots.push(font);
-                    }
-                    None => break,
-                }
-            }
-        }
-
-        Self {
+        let mut world = Self {
             vfs: Vfs::new(),
             main_path: None,
             today: None,
@@ -52,8 +36,33 @@ impl OnykiaWorld {
                     .with_features(Features::from_iter([Feature::Html]))
                     .build(),
             ),
-            fonts: LazyHash::new(book),
-            font_slots,
+            fonts: LazyHash::new(FontBook::new()),
+            font_slots: Vec::new(),
+        };
+        // Embed typst-cli's default fonts (Libertinus Serif, New Computer
+        // Modern, NCM Math, DejaVu Sans Mono) directly into the WASM binary
+        // via `typst-assets`. Hosts can still register additional fonts at
+        // runtime via the `addFont` / `addFonts` dispatch calls.
+        world.add_static_fonts(typst_assets::fonts());
+        world
+    }
+
+    /// Register fonts whose bytes live in static memory (typically embedded
+    /// via `include_bytes!`). Avoids the heap copy `add_font` performs.
+    fn add_static_fonts(&mut self, files: impl IntoIterator<Item = &'static [u8]>) {
+        for bytes in files {
+            self.push_static_font_file(bytes);
+        }
+        self.rebuild_book();
+    }
+
+    fn push_static_font_file(&mut self, bytes: &'static [u8]) {
+        let bytes = Bytes::new(bytes);
+        for face_idx in 0u32.. {
+            match Font::new(bytes.clone(), face_idx) {
+                Some(font) => self.font_slots.push(font),
+                None => break,
+            }
         }
     }
 

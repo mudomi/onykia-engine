@@ -6,13 +6,13 @@ export interface WasmFactory {
 }
 
 export interface HandlerOptions {
-  /** Initial shared-memory pages (64 KB each). Default: 256 (16 MB). */
+  /** Initial shared-memory pages (64 KB each). Default: 512 (32 MB). */
   initMemory?: number;
-  /** Maximum shared-memory pages. Default: 65536 (4 GB). */
+  /** Maximum shared-memory pages (64 KB each). Default: 16384 (1 GB) — matches the WASM `--max-memory` link flag. */
   maxMemory?: number;
   /** Reject outstanding promises when the handler is destroyed. Default: true. */
   rejectOnDestruction?: boolean;
-  /** Override the thread count. Default: `min(hardwareConcurrency, 16)`. */
+  /** rayon thread-pool size. Default: `min(hardwareConcurrency, 16)`. Floored, clamped to `[1, 16]`. */
   numThreads?: number;
 }
 

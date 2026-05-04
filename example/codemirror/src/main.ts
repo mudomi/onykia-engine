@@ -18,7 +18,7 @@ const previewEl = document.getElementById('preview')!;
 const formatSelect = document.getElementById('format') as HTMLSelectElement;
 const exportButton = document.getElementById('export') as HTMLButtonElement;
 
-const core = createEngine();
+const core = await createEngine();
 await core.create(PATH, 'text/x-typst', INITIAL);
 
 const { extensions } = await typstExtensions(core, PATH, null);
@@ -85,7 +85,6 @@ async function renderHtml(): Promise<void> {
 
 async function downloadPdf(): Promise<void> {
   const res = await core.export({ format: 'pdf' });
-  // Copy off any SharedArrayBuffer-backed view: Blob expects ArrayBuffer-backed.
   const bytes = new Uint8Array(res.data);
   const url = URL.createObjectURL(new Blob([bytes], { type: res.mime }));
 

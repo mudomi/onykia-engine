@@ -27,6 +27,19 @@ npm run build:wasm
 npm run example:codemirror   # or example:monaco
 ```
 
+## Cross-origin isolation
+
+Loading onykia-engine requires a cross-origin-isolated host
+page, serve it with:
+
+```
+Cross-Origin-Opener-Policy:   same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without these headers `createWasmFactory()` throws synchronously with a
+message pointing at this section. See [SharedArrayBuffer requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer).
+
 ## Known gaps
 
 - **Outline** notifications are stubbed.

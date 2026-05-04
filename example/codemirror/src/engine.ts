@@ -1,15 +1,12 @@
-import { Core } from '@mudomi/onykia-engine';
+import { Core, createWasmFactory } from '@mudomi/onykia-engine';
 
-// WASM + worker are produced by scripts/build-wasm.sh into example/public/assets.
-const WASM_URL = '/assets/onykia_engine.wasm';
-const WORKER_URL = '/assets/onykia_worker.js';
-
-export function createEngine(): Core {
+export async function createEngine(): Promise<Core> {
+  const wasm = createWasmFactory({
+    wasmUrl: '/assets/onykia_engine.wasm',
+    workerUrl: '/assets/onykia_worker.js',
+  });
   return new Core({
-    wasm: {
-      wasmUrl: WASM_URL,
-      worker: () => new Worker(WORKER_URL, { type: 'module' }),
-    },
+    wasm,
     package: async (namespace, name, version) => {
       const url = `https://packages.typst.org/${namespace}/${name}-${version}.tar.gz`;
       const res = await fetch(url);

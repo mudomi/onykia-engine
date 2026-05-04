@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::protocol::{post_notification, to_js};
+use crate::protocol::{post_signal, to_js};
 use crate::state::State;
 
 #[derive(Serialize)]
@@ -74,14 +74,14 @@ pub fn emit<T: serde::Serialize>(state: &State, name: &str, payload: &T) {
         return;
     }
     match to_js(payload) {
-        Ok(js) => post_notification(name, js),
+        Ok(js) => post_signal(name, js),
         Err(err) => {
             // Surface a status error notification but don't recurse.
             if let Ok(fallback) = to_js(&StatusNotification {
                 status: "error",
                 message: Some(err),
             }) {
-                post_notification("status", fallback);
+                post_signal("status", fallback);
             }
         }
     }
