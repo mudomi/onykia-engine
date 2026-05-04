@@ -23,8 +23,9 @@ async function onBoot(event) {
     };
 
     wasm.bootstrap();
-    state = new wasm.State();
+
     await wasm.initThreadPool(msg.threads);
+    state = new wasm.State();
   } catch (err) {
     self.postMessage({ tag: 'online', error: String(err) });
     return;

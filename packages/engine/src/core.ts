@@ -34,8 +34,6 @@ export interface CoreOptions {
 }
 
 /**
- * Editor-agnostic Typst engine client.
- *
  * Every call that mutates compiler state also triggers an implicit
  * recompilation inside the worker. Consumers receive results through
  * `onStatus` / `onDiagnostics` / `onPages` / `onOutline` subscriptions.

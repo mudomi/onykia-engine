@@ -1324,6 +1324,7 @@ dependencies = [
  "ecow",
  "getrandom",
  "js-sys",
+ "rayon",
  "serde",
  "serde-wasm-bindgen",
  "serde_bytes",

@@ -49,6 +49,7 @@ getrandom = { version = "0.2", features = ["js"] }
 
 # threads
 wasm-bindgen-rayon = "1.3"
+rayon = "1"
 
 [features]
 default = ["panic-hook"]

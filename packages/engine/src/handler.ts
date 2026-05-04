@@ -8,8 +8,7 @@ import type {
 import { DEFAULT_INIT_MEMORY_PAGES, DEFAULT_MAX_MEMORY_PAGES } from './wasm.js';
 
 const ID_WRAP = 1 << 30;
-// Past 16, per-thread TLS allocation dominates the parallelism gain on real
-// Typst documents (rayon scales sub-linearly for our workloads).
+
 const THREAD_CAP = 16;
 
 export type WorkerInbox =

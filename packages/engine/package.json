@@ -2,7 +2,7 @@
   "name": "@mudomi/onykia-engine",
   "version": "0.2.2",
   "type": "module",
-  "description": "Editor-agnostic Typst engine: worker pool, message bus, and IDE-feature client.",
+  "description": "Typst compiled to WebAssembly for the web with nice bindings for IDEs and more.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mudomi/onykia-engine.git",

@@ -2,6 +2,7 @@
 //! backed by the VFS.
 
 use ecow::EcoString;
+use rayon::prelude::*;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Datetime};
 use typst::syntax::package::PackageSpec;
@@ -50,35 +51,24 @@ impl OnykiaWorld {
     /// Register fonts whose bytes live in static memory (typically embedded
     /// via `include_bytes!`). Avoids the heap copy `add_font` performs.
     fn add_static_fonts(&mut self, files: impl IntoIterator<Item = &'static [u8]>) {
-        for bytes in files {
-            self.push_static_font_file(bytes);
-        }
+        self.add_font_files(files.into_iter().map(Bytes::new).collect());
+    }
+
+    /// Parse all faces of every supplied font file in parallel and commit
+    /// them to `font_slots` + `FontBook` in one rebuild. Each `Font::new`
+    /// is a self-contained sfnt parse, so this scales cleanly across the
+    /// rayon pool initialised by `wasm_bindgen_rayon::init_thread_pool`.
+    fn add_font_files(&mut self, files: Vec<Bytes>) {
+        let parsed: Vec<Font> = files
+            .into_par_iter()
+            .flat_map(parse_font_file)
+            .collect();
+        self.font_slots.extend(parsed);
         self.rebuild_book();
     }
 
-    fn push_static_font_file(&mut self, bytes: &'static [u8]) {
-        let bytes = Bytes::new(bytes);
-        for face_idx in 0u32.. {
-            match Font::new(bytes.clone(), face_idx) {
-                Some(font) => self.font_slots.push(font),
-                None => break,
-            }
-        }
-    }
-
-    /// Parse one font file into `font_slots` without rebuilding the book.
-    fn push_font_file(&mut self, bytes: Vec<u8>) {
-        let bytes = Bytes::new(bytes);
-        for face_idx in 0u32.. {
-            match Font::new(bytes.clone(), face_idx) {
-                Some(font) => self.font_slots.push(font),
-                None => break,
-            }
-        }
-    }
-
     /// Rebuild the `FontBook` from the current `font_slots`. Call after one or
-    /// more `push_font_file` calls to commit the new fonts to the world.
+    /// more font additions to commit them to the world.
     fn rebuild_book(&mut self) {
         let mut book = FontBook::new();
         for font in &self.font_slots {
@@ -89,22 +79,31 @@ impl OnykiaWorld {
 
     /// Add a single font file (may contain multiple faces) and commit.
     pub fn add_font(&mut self, bytes: Vec<u8>) {
-        self.push_font_file(bytes);
-        self.rebuild_book();
+        self.add_font_files(vec![Bytes::new(bytes)]);
     }
 
     /// Add multiple font files in one shot, rebuilding the book only once.
     pub fn add_fonts(&mut self, files: Vec<Vec<u8>>) {
-        for bytes in files {
-            self.push_font_file(bytes);
-        }
-        self.rebuild_book();
+        self.add_font_files(files.into_iter().map(Bytes::new).collect());
     }
 
     fn main_id(&self) -> Option<FileId> {
         let path = self.main_path.as_deref()?;
         Some(FileId::new(None, VirtualPath::new(path)))
     }
+}
+
+/// Parse every face inside one font file. Free function so rayon's worker
+/// closures don't capture `&mut self`.
+fn parse_font_file(bytes: Bytes) -> Vec<Font> {
+    let mut faces = Vec::new();
+    for face_idx in 0u32.. {
+        match Font::new(bytes.clone(), face_idx) {
+            Some(font) => faces.push(font),
+            None => break,
+        }
+    }
+    faces
 }
 
 impl World for OnykiaWorld {
