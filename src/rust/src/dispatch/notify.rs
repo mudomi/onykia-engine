@@ -77,11 +77,13 @@ pub fn emit<T: serde::Serialize>(state: &State, name: &str, payload: &T) {
         Ok(js) => post_signal(name, js),
         Err(err) => {
             // Surface a status error notification but don't recurse.
-            if let Ok(fallback) = to_js(&StatusNotification {
-                status: "error",
-                message: Some(err),
-            }) {
-                post_signal("status", fallback);
+            if state.subscriptions.contains("status") {
+                if let Ok(fallback) = to_js(&StatusNotification {
+                    status: "error",
+                    message: Some(err),
+                }) {
+                    post_signal("status", fallback);
+                }
             }
         }
     }

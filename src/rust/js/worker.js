@@ -43,8 +43,8 @@ function onRunning(event) {
       catch (err) { crash(err); }
       return;
     case 'supply':
-      if (m.failure !== undefined) wasm.supply_failure(m.id, m.failure);
-      else wasm.supply_bytes(m.id, m.bytes);
+      if (m.failure !== undefined) wasm.supply_failure(state, m.id, m.failure);
+      else wasm.supply_bytes(state, m.id, m.bytes);
       return;
   }
 }

@@ -1,6 +1,6 @@
 //! Dispatch table for the named request protocol.
 
-mod compile;
+pub mod compile;
 mod export;
 mod ide;
 mod notify;
@@ -54,7 +54,7 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         "export" => export::export(state, args),
         "render" => export::render(state, args),
         "archive" => export::archive(state, args),
-        "eval" => Ok(JsValue::NULL), // requires typst >= 0.15
+        "eval" => Err("eval not implemented".into()), // requires typst >= 0.15
 
         _ => Err(format!("unknown request: {name}")),
     };
@@ -211,8 +211,30 @@ fn handle_add_fonts(state: &mut State, args: JsValue) -> Result<(), String> {
     Ok(())
 }
 
-fn handle_set_packages(_state: &mut State, _args: JsValue) -> Result<(), String> {
-    // The compiler fetches packages lazily via ask(); JS owns the index.
+#[derive(Deserialize)]
+struct NamespacedIndex {
+    namespace: String,
+    data: serde_bytes::ByteBuf,
+}
+
+#[derive(Deserialize)]
+struct SetPackagesArgs {
+    /// Bytes of the public `preview` namespace's `index.json`.
+    data: serde_bytes::ByteBuf,
+    #[serde(default)]
+    private_namespaces: Vec<NamespacedIndex>,
+}
+
+fn handle_set_packages(state: &mut State, args: JsValue) -> Result<(), String> {
+    let args: SetPackagesArgs = from_js(args)?;
+    state
+        .world
+        .set_package_index("preview".into(), args.data.into_vec());
+    for entry in args.private_namespaces {
+        state
+            .world
+            .set_package_index(entry.namespace.into(), entry.data.into_vec());
+    }
     Ok(())
 }
 

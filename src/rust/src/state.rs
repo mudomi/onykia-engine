@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use ecow::EcoVec;
 use typst::diag::SourceDiagnostic;
 use typst::layout::PagedDocument;
+use typst::syntax::package::PackageSpec;
 use wasm_bindgen::prelude::*;
 
 use crate::world::OnykiaWorld;
@@ -45,6 +46,7 @@ pub struct State {
     pub(crate) last_document: Option<PagedDocument>,
     pub(crate) last_diagnostics: EcoVec<SourceDiagnostic>,
     pub(crate) silent_next_compile: Cell<bool>,
+    pub(crate) in_flight_packages: HashSet<PackageSpec>,
 }
 
 #[wasm_bindgen]
@@ -60,6 +62,7 @@ impl State {
             last_document: None,
             last_diagnostics: EcoVec::new(),
             silent_next_compile: Cell::new(false),
+            in_flight_packages: HashSet::new(),
         }
     }
 }

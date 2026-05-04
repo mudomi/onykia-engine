@@ -2,6 +2,7 @@
 
 mod ask;
 mod dispatch;
+mod packages;
 mod protocol;
 mod state;
 mod vfs;
@@ -9,7 +10,6 @@ mod world;
 
 use wasm_bindgen::prelude::*;
 
-pub use ask::{deliver, request};
 pub use state::State;
 pub use wasm_bindgen_rayon::init_thread_pool;
 
@@ -25,11 +25,11 @@ pub fn dispatch_call(state: &mut State, id: u32, name: &str, args: JsValue) {
 }
 
 #[wasm_bindgen]
-pub fn supply_bytes(id: u32, data: &[u8]) {
-    ask::deliver(id, Ok(data.to_vec()));
+pub fn supply_bytes(state: &mut State, id: u32, data: &[u8]) {
+    ask::deliver(state, id, Ok(data.to_vec()));
 }
 
 #[wasm_bindgen]
-pub fn supply_failure(id: u32, error: &str) {
-    ask::deliver(id, Err(error.to_string()));
+pub fn supply_failure(state: &mut State, id: u32, error: &str) {
+    ask::deliver(state, id, Err(error.to_string()));
 }

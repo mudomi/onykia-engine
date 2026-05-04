@@ -1,9 +1,12 @@
 //! Implementation of the [`typst::World`] and `typst_ide::IdeWorld` traits
 //! backed by the VFS.
 
+use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+
 use ecow::EcoString;
 use rayon::prelude::*;
-use typst::diag::{FileError, FileResult};
+use typst::diag::{FileError, FileResult, PackageError};
 use typst::foundations::{Bytes, Datetime};
 use typst::syntax::package::PackageSpec;
 use typst::syntax::{FileId, Source, VirtualPath};
@@ -13,12 +16,23 @@ use typst::{Library, LibraryExt, World};
 use typst_ide::IdeWorld;
 use typst_library::{Feature, Features};
 
+use crate::packages;
 use crate::vfs::Vfs;
 
 pub struct OnykiaWorld {
     pub vfs: Vfs,
     pub main_path: Option<String>,
     pub today: Option<Datetime>,
+
+    /// Raw bytes of `index.json` per namespace
+    package_indices: HashMap<EcoString, Vec<u8>>,
+    /// Flat catalog
+    indexed_packages: Vec<(PackageSpec, Option<EcoString>)>,
+    /// Packages whose tarball has been unpacked into `vfs`.
+    installed_packages: HashSet<PackageSpec>,
+    /// Packages whose fetch failed
+    failed_packages: HashSet<PackageSpec>,
+    pending_packages: Mutex<HashSet<PackageSpec>>,
 
     library: LazyHash<Library>,
     fonts: LazyHash<FontBook>,
@@ -31,6 +45,11 @@ impl OnykiaWorld {
             vfs: Vfs::new(),
             main_path: None,
             today: None,
+            package_indices: HashMap::new(),
+            indexed_packages: Vec::new(),
+            installed_packages: HashSet::new(),
+            failed_packages: HashSet::new(),
+            pending_packages: Mutex::new(HashSet::new()),
             // Enable Feature::Html
             library: LazyHash::new(
                 Library::builder()
@@ -67,8 +86,6 @@ impl OnykiaWorld {
         self.rebuild_book();
     }
 
-    /// Rebuild the `FontBook` from the current `font_slots`. Call after one or
-    /// more font additions to commit them to the world.
     fn rebuild_book(&mut self) {
         let mut book = FontBook::new();
         for font in &self.font_slots {
@@ -77,24 +94,87 @@ impl OnykiaWorld {
         self.fonts = LazyHash::new(book);
     }
 
-    /// Add a single font file (may contain multiple faces) and commit.
     pub fn add_font(&mut self, bytes: Vec<u8>) {
         self.add_font_files(vec![Bytes::new(bytes)]);
     }
 
-    /// Add multiple font files in one shot, rebuilding the book only once.
     pub fn add_fonts(&mut self, files: Vec<Vec<u8>>) {
         self.add_font_files(files.into_iter().map(Bytes::new).collect());
+    }
+
+    /// Replace the catalog for a namespace with the raw `index.json` bytes
+    /// and rebuild the flat catalog. Empty bytes (`Uint8Array(0)`) clear the
+    /// namespace; JS sends that for forbidden private scopes.
+    pub fn set_package_index(&mut self, namespace: EcoString, data: Vec<u8>) {
+        if data.is_empty() {
+            self.package_indices.remove(&namespace);
+        } else {
+            self.package_indices.insert(namespace, data);
+        }
+        self.rebuild_indexed_packages();
+    }
+
+    fn rebuild_indexed_packages(&mut self) {
+        let mut all = Vec::new();
+        for (namespace, bytes) in &self.package_indices {
+            all.extend(packages::parse_index(namespace, bytes));
+        }
+        self.indexed_packages = all;
+    }
+
+    /// Drain specs that World::file recorded as unresolved during the last
+    /// compile pass. Specs already known to have failed are skipped, so each
+    /// pass only re-asks for genuinely-new misses.
+    pub fn take_pending_packages(&mut self) -> Vec<PackageSpec> {
+        let drained: Vec<PackageSpec> = self
+            .pending_packages
+            .get_mut()
+            .expect("pending_packages mutex poisoned")
+            .drain()
+            .collect();
+        drained
+            .into_iter()
+            .filter(|s| !self.failed_packages.contains(s) && !self.installed_packages.contains(s))
+            .collect()
+    }
+
+    pub fn mark_package_installed(&mut self, spec: PackageSpec) {
+        self.installed_packages.insert(spec);
+    }
+
+    pub fn mark_package_failed(&mut self, spec: PackageSpec) {
+        self.failed_packages.insert(spec);
     }
 
     fn main_id(&self) -> Option<FileId> {
         let path = self.main_path.as_deref()?;
         Some(FileId::new(None, VirtualPath::new(path)))
     }
+
+    /// Resolve a file/source FileId that carries a package spec.
+    fn package_status(&self, id: FileId, spec: &PackageSpec) -> PackageStatus {
+        if self.failed_packages.contains(spec) {
+            return PackageStatus::FetchFailed;
+        }
+        if self.installed_packages.contains(spec) {
+            return PackageStatus::Installed;
+        }
+        // First time we see this spec during the current compile - record it
+        // so dispatch::compile can fire a fetch and retry.
+        if let Ok(mut pending) = self.pending_packages.lock() {
+            pending.insert(spec.clone());
+        }
+        let _ = id;
+        PackageStatus::Pending
+    }
 }
 
-/// Parse every face inside one font file. Free function so rayon's worker
-/// closures don't capture `&mut self`.
+enum PackageStatus {
+    Installed,
+    Pending,
+    FetchFailed,
+}
+
 fn parse_font_file(bytes: Bytes) -> Vec<Font> {
     let mut faces = Vec::new();
     for face_idx in 0u32.. {
@@ -121,6 +201,12 @@ impl World for OnykiaWorld {
     }
 
     fn source(&self, id: FileId) -> FileResult<Source> {
+        if let Some(spec) = id.package() {
+            if let Some(entry) = self.vfs.find_package(id) {
+                return entry.source().cloned().ok_or(FileError::NotSource);
+            }
+            return Err(self.package_file_error(id, spec));
+        }
         if let Some((_, file)) = self.vfs.find_by_id(id) {
             if let Some(source) = file.source() {
                 return Ok(source.clone());
@@ -137,6 +223,12 @@ impl World for OnykiaWorld {
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
+        if let Some(spec) = id.package() {
+            if let Some(entry) = self.vfs.find_package(id) {
+                return Ok(entry.bytes.clone());
+            }
+            return Err(self.package_file_error(id, spec));
+        }
         if let Some((_, file)) = self.vfs.find_by_id(id) {
             return Ok(file.bytes.clone());
         }
@@ -154,13 +246,26 @@ impl World for OnykiaWorld {
     }
 }
 
+impl OnykiaWorld {
+    fn package_file_error(&self, id: FileId, spec: &PackageSpec) -> FileError {
+        match self.package_status(id, spec) {
+            PackageStatus::Installed => {
+                FileError::NotFound(id.vpath().as_rooted_path().to_path_buf())
+            }
+            PackageStatus::Pending | PackageStatus::FetchFailed => {
+                FileError::Package(PackageError::NotFound(spec.clone()))
+            }
+        }
+    }
+}
+
 impl IdeWorld for OnykiaWorld {
     fn upcast(&self) -> &dyn World {
         self
     }
 
     fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
-        &[]
+        &self.indexed_packages
     }
 
     fn files(&self) -> Vec<FileId> {

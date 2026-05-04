@@ -216,19 +216,33 @@ export class Core {
     return this.handler.dispatch('archive', { format });
   }
 
-  eval(expr: string): Promise<unknown> {
-    return this.handler.dispatch('eval', { expr });
-  }
-
   // ─── lifecycle ─────────────────────────────────────────────────────────
 
   destroy(): void {
     this.handler.destroy();
   }
 
+  // Recreate the worker and re-subscribe channels that still have listeners.
   revive(): void {
-    this.subscribedChannels.clear();
     this.handler.revive();
+    this.subscribedChannels.clear();
+    for (const [name, set] of this.listeners.entries()) {
+      if (set.size === 0) continue;
+      this.subscribedChannels.add(name);
+      void this.handler.dispatch('subscribe', { name }).catch((err: Error) => {
+        if (!err.message.includes('destroyed')) {
+          console.error('[onykia] subscribe failed after revive:', err);
+        }
+      });
+    }
+  }
+
+  async eval(expr: string): Promise<unknown> {
+    const value = await this.handler.dispatch('eval', { expr });
+    if (value === null) {
+      throw new Error('eval not implemented');
+    }
+    return value;
   }
 }
 
