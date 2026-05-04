@@ -4,7 +4,6 @@ use ecow::EcoVec;
 use serde::Serialize;
 use typst::diag::{Severity, SourceDiagnostic};
 use typst::layout::PagedDocument;
-use typst::syntax::FileId;
 use typst::syntax::package::PackageSpec;
 
 use super::notify::{
@@ -75,8 +74,8 @@ fn dispatch_pending_fetches(state: &mut State) -> bool {
             )
         };
         if dispatched.is_err() {
-            // Couldn't even queue the request — treat as a permanent failure
-            // so a subsequent compile doesn't loop on the same miss.
+            // Couldn't even queue the request — count as a failed attempt so
+            // we don't spin forever on a broken host.
             state.in_flight_packages.remove(&spec);
             state.world.mark_package_failed(spec);
         }
@@ -173,15 +172,14 @@ fn resolve_span(
     if let Some(spec) = id.package() {
         return (None, Some(spec.to_string()), None);
     }
-    let Some((path, _)) = state.world.vfs.find_by_id(id) else {
+    let Some((path, file)) = state.world.vfs.find_by_id(id) else {
         return (None, None, None);
     };
-    let range = source_range_for(state, id, span);
+    let range = source_range_for(file, span);
     (Some(path.to_string()), None, range)
 }
 
-fn source_range_for(state: &State, id: FileId, span: typst::syntax::Span) -> Option<Range> {
-    let (_, file) = state.world.vfs.find_by_id(id)?;
+fn source_range_for(file: &crate::vfs::File, span: typst::syntax::Span) -> Option<Range> {
     let source = file.source()?;
     let range = source.range(span)?;
     Some(Range {

@@ -27,9 +27,7 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
 
         // ─── Compiler config ─────────────────────────────────────────────
         "setTarget" => handle_set_target(state, args).map(|_| JsValue::UNDEFINED),
-        "setFeatures" => handle_set_features(state, args).map(|_| JsValue::UNDEFINED),
         "setMain" => handle_set_main(state, args).map(|_| JsValue::UNDEFINED),
-        "setProjectId" => handle_set_project_id(state, args).map(|_| JsValue::UNDEFINED),
         "addFont" => handle_add_font(state, args).map(|_| JsValue::UNDEFINED),
         "addFonts" => handle_add_fonts(state, args).map(|_| JsValue::UNDEFINED),
         "setRemotePackages" => handle_set_packages(state, args).map(|_| JsValue::UNDEFINED),
@@ -79,7 +77,6 @@ fn is_compile_trigger(name: &str) -> bool {
             | "delete"
             | "clear"
             | "setTarget"
-            | "setFeatures"
             | "setMain"
             | "addFont"
             | "addFonts"
@@ -157,16 +154,6 @@ fn handle_set_target(state: &mut State, args: JsValue) -> Result<(), String> {
 }
 
 #[derive(Deserialize)]
-struct SetFeaturesArgs {
-    features: Vec<String>,
-}
-fn handle_set_features(state: &mut State, args: JsValue) -> Result<(), String> {
-    let args: SetFeaturesArgs = from_js(args)?;
-    state.features = args.features;
-    Ok(())
-}
-
-#[derive(Deserialize)]
 struct SetMainArgs {
     path: String,
     #[serde(default)]
@@ -176,16 +163,6 @@ fn handle_set_main(state: &mut State, args: JsValue) -> Result<(), String> {
     let args: SetMainArgs = from_js(args)?;
     state.world.main_path = Some(args.path);
     state.silent_next_compile.set(args.silent);
-    Ok(())
-}
-
-#[derive(Deserialize)]
-struct SetProjectIdArgs {
-    id: String,
-}
-fn handle_set_project_id(state: &mut State, args: JsValue) -> Result<(), String> {
-    let args: SetProjectIdArgs = from_js(args)?;
-    state.project_id = Some(args.id);
     Ok(())
 }
 

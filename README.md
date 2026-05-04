@@ -14,7 +14,7 @@ Used in [`onykia-editor`](https://github.com/mudomi/onykia-editor) and [`onykia-
 
 ## Prerequisites
 
-- **Rust stable**
+- **Rust nightly**
 - **wasm-bindgen-cli** - version-matched to the `wasm-bindgen` crate in
   `src/rust/Cargo.toml`.
 - **Node.js 20+** and **npm 10+**.

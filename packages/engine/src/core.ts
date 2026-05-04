@@ -1,6 +1,5 @@
 import { Handler } from './handler.js';
 import type {
-  AskArgs,
   AskHandler,
   AutocompleteResult,
   DefinitionResult,
@@ -19,17 +18,11 @@ import type {
 
 export interface CoreOptions {
   wasm: WasmFactory;
-  font?: (file: string) => Promise<Uint8Array | ArrayBuffer>;
   package?: (
     namespace: string,
     name: string,
     version: string,
   ) => Promise<Uint8Array | ArrayBuffer>;
-  spellcheck?: (
-    word: string,
-    lang: string,
-    region: string,
-  ) => Promise<boolean>;
   handlerOptions?: HandlerOptions;
 }
 
@@ -42,27 +35,15 @@ export class Core {
   private handler: Handler;
   private listeners = new Map<NotifyName, Set<(payload: unknown) => void>>();
   private subscribedChannels = new Set<NotifyName>();
+  private replayOps: { name: string; args: unknown }[] = [];
 
   constructor(options: CoreOptions) {
     const ask: AskHandler = async (name, args) => {
       switch (name) {
-        case 'font': {
-          if (!options.font) throw new Error('no font loader configured');
-          const a = args as AskArgs['font'];
-          const bytes = await options.font(a.file);
-          return toU8(bytes);
-        }
         case 'package': {
           if (!options.package) throw new Error('no package loader configured');
-          const a = args as AskArgs['package'];
-          const bytes = await options.package(a.namespace, a.name, a.version);
+          const bytes = await options.package(args.namespace, args.name, args.version);
           return toU8(bytes);
-        }
-        case 'spellcheck': {
-          if (!options.spellcheck) return new Uint8Array([1]);
-          const a = args as AskArgs['spellcheck'];
-          const ok = await options.spellcheck(a.word, a.lang, a.region);
-          return new Uint8Array([ok ? 1 : 0]);
         }
       }
     };
@@ -95,7 +76,16 @@ export class Core {
   }
 
   off<K extends NotifyName>(name: K, fn: (payload: NotifyPayloads[K]) => void): void {
-    this.listeners.get(name)?.delete(fn as (p: unknown) => void);
+    const set = this.listeners.get(name);
+    if (!set) return;
+    set.delete(fn as (p: unknown) => void);
+    if (set.size > 0) return;
+
+    this.listeners.delete(name);
+    if (!this.subscribedChannels.delete(name)) return;
+    void this.handler.dispatch('unsubscribe', { name }).catch((err: Error) => {
+      if (!err.message.includes('destroyed')) console.error('[onykia] unsubscribe failed:', err);
+    });
   }
 
   onStatus(fn: (p: NotifyPayloads['status']) => void) { return this.on('status', fn); }
@@ -107,59 +97,51 @@ export class Core {
 
   create(path: string, mime: string, data: string | Uint8Array): Promise<void> {
     const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-    return this.handler.dispatch('create', { path, mime, data: bytes });
+    return this.dispatchStateful('create', { path, mime, data: bytes });
   }
 
   edit(path: string, edits: { range: { start: number; end: number }; replacement: string }[]): Promise<void> {
-    return this.handler.dispatch('edit', { path, edits });
+    return this.dispatchStateful('edit', { path, edits });
   }
 
   move(from: string, to: string, mime?: string): Promise<void> {
-    return this.handler.dispatch('move', { from, to, mime });
+    return this.dispatchStateful('move', { from, to, mime });
   }
 
   delete(path: string): Promise<void> {
-    return this.handler.dispatch('delete', { path });
+    return this.dispatchStateful('delete', { path });
   }
 
   clear(): Promise<void> {
-    return this.handler.dispatch('clear', {});
+    return this.dispatchStateful('clear', {});
   }
 
   // ─── compiler config ───────────────────────────────────────────────────
 
   setTarget(target: ExportTarget): Promise<void> {
-    return this.handler.dispatch('setTarget', { target });
+    return this.dispatchStateful('setTarget', { target });
   }
 
   setMain(path: string, silent = false): Promise<void> {
-    return this.handler.dispatch('setMain', { path, silent });
-  }
-
-  setFeatures(features: string[]): Promise<void> {
-    return this.handler.dispatch('setFeatures', { features });
-  }
-
-  setProjectId(id: string): Promise<void> {
-    return this.handler.dispatch('setProjectId', { id });
+    return this.dispatchStateful('setMain', { path, silent });
   }
 
   /** Register a font file (TTF/OTF, may contain multiple faces). */
   addFont(data: Uint8Array): Promise<void> {
-    return this.handler.dispatch('addFont', { data });
+    return this.dispatchStateful('addFont', { data });
   }
 
   /** Register multiple font files in one round-trip, rebuilding the font book once. */
   addFonts(fonts: Uint8Array[]): Promise<void> {
-    return this.handler.dispatch('addFonts', { fonts });
+    return this.dispatchStateful('addFonts', { fonts });
   }
 
   setRemotePackages(data: Uint8Array, privateNamespaces: { namespace: string; data: Uint8Array }[] = []): Promise<void> {
-    return this.handler.dispatch('setRemotePackages', { data, privateNamespaces });
+    return this.dispatchStateful('setRemotePackages', { data, privateNamespaces });
   }
 
   configureSpellCheck(enabled: boolean, personalDictionary: string[] = []): Promise<void> {
-    return this.handler.dispatch('configureSpellCheck', { enabled, personalDictionary });
+    return this.dispatchStateful('configureSpellCheck', { enabled, personalDictionary });
   }
 
   // ─── IDE features ──────────────────────────────────────────────────────
@@ -226,15 +208,7 @@ export class Core {
   revive(): void {
     this.handler.revive();
     this.subscribedChannels.clear();
-    for (const [name, set] of this.listeners.entries()) {
-      if (set.size === 0) continue;
-      this.subscribedChannels.add(name);
-      void this.handler.dispatch('subscribe', { name }).catch((err: Error) => {
-        if (!err.message.includes('destroyed')) {
-          console.error('[onykia] subscribe failed after revive:', err);
-        }
-      });
-    }
+    void this.replayAfterRevive();
   }
 
   async eval(expr: string): Promise<unknown> {
@@ -244,8 +218,50 @@ export class Core {
     }
     return value;
   }
+
+  private async dispatchStateful<T>(name: string, args: unknown): Promise<T> {
+    const result = await this.handler.dispatch<T>(name, args);
+    this.replayOps.push({ name, args: cloneValue(args) });
+    return result;
+  }
+
+  private async replayAfterRevive(): Promise<void> {
+    for (const op of this.replayOps) {
+      try {
+        await this.handler.dispatch(op.name, cloneValue(op.args));
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('destroyed')) return;
+        console.error(`[onykia] replay failed for ${op.name}:`, err);
+      }
+    }
+
+    for (const [name, set] of this.listeners.entries()) {
+      if (set.size === 0) continue;
+      this.subscribedChannels.add(name);
+      try {
+        await this.handler.dispatch('subscribe', { name });
+      } catch (err) {
+        if (!(err instanceof Error) || !err.message.includes('destroyed')) {
+          console.error('[onykia] subscribe failed after revive:', err);
+        }
+      }
+    }
+  }
 }
 
 function toU8(bytes: Uint8Array | ArrayBuffer): Uint8Array {
   return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+}
+
+function cloneValue<T>(value: T): T {
+  if (value instanceof Uint8Array) return new Uint8Array(value) as T;
+  if (Array.isArray(value)) return value.map(v => cloneValue(v)) as T;
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = cloneValue(v);
+    }
+    return out as T;
+  }
+  return value;
 }

@@ -5,8 +5,6 @@ import { fromByteOffset, toByteOffset } from './offsets.js';
 export interface DefinitionHandlers {
   /** Called when the target is another source file. Default: move cursor if same path. */
   onSource?(result: { path: string; pos: number }): void;
-  /** Called when the target is a URL. Default: `window.open(url)`. */
-  onUrl?(url: string): void;
 }
 
 export function definitionExtension(core: Core, path: string, handlers: DefinitionHandlers = {}) {
@@ -37,21 +35,14 @@ async function runDefinition(
   }
   if (!result) return;
 
-  if (result.kind === 'url') {
-    (handlers.onUrl ?? ((u: string) => window.open(u, '_blank')))(result.url);
+  if (handlers.onSource) {
+    handlers.onSource(result);
     return;
   }
-
-  if (result.kind === 'source') {
-    if (handlers.onSource) {
-      handlers.onSource(result);
-      return;
-    }
-    if (result.path === path) {
-      view.dispatch({
-        selection: { anchor: fromByteOffset(docText, result.pos) },
-        scrollIntoView: true,
-      });
-    }
+  if (result.path === path) {
+    view.dispatch({
+      selection: { anchor: fromByteOffset(docText, result.pos) },
+      scrollIntoView: true,
+    });
   }
 }

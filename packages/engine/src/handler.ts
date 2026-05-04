@@ -16,8 +16,12 @@ export type WorkerInbox =
   | { tag: 'call'; id: number; name: string; args: unknown }
   | { tag: 'supply'; id: number; bytes?: Uint8Array; failure?: string };
 
+type WorkerResult =
+  | { tag: 'result'; id: number; response: unknown }
+  | { tag: 'result'; id: number; error: string };
+
 export type WorkerOutbox =
-  | { tag: 'result'; id: number; response: unknown; error?: string }
+  | WorkerResult
   | { tag: 'signal'; channel: NotifyName; payload: unknown }
   | { tag: 'fetch'; id: number; resource: string; args: unknown }
   | { tag: 'online'; error?: string };
@@ -120,11 +124,11 @@ export class Handler {
     }
   }
 
-  private completeCall(msg: Extract<WorkerOutbox, { tag: 'result' }>): void {
+  private completeCall(msg: WorkerResult): void {
     const pending = this.inflight.get(msg.id);
     if (!pending) return;
     this.inflight.delete(msg.id);
-    if (msg.error !== undefined) pending.reject(new Error(msg.error));
+    if ('error' in msg) pending.reject(new Error(msg.error));
     else pending.resolve(msg.response);
   }
 
@@ -142,6 +146,9 @@ export class Handler {
     this.rejectReady(err);
     for (const p of this.inflight.values()) p.reject(err);
     this.inflight.clear();
+    this.worker.onmessage = null;
+    this.worker.onerror = null;
+    this.worker.terminate();
     this.notifyHost('status', { status: 'crashed', message: err.message } as never);
   }
 }

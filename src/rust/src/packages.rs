@@ -47,7 +47,10 @@ pub fn parse_index(namespace: &EcoString, bytes: &[u8]) -> Vec<(PackageSpec, Opt
     let entries: Vec<IndexEntry> = match serde_json::from_slice(bytes) {
         Ok(v) => v,
         // Tolerate malformed indices rather than nuking autocomplete entirely.
-        Err(_) => return Vec::new(),
+        Err(err) => {
+            eprintln!("[onykia] malformed package index for namespace '{namespace}': {err}");
+            return Vec::new();
+        }
     };
     entries
         .into_iter()

@@ -52,6 +52,7 @@ function onRunning(event) {
 function crash(err) {
   console.error('[onykia/driver]', err);
   self.onmessage = null;
+  self.postMessage({ tag: 'online', error: err instanceof Error ? err.message : String(err) });
   self.postMessage({
     tag: 'signal',
     channel: 'status',

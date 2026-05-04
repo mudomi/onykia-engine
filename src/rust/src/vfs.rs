@@ -55,6 +55,7 @@ impl PackageEntry {
 
 pub struct Vfs {
     files: HashMap<String, File>,
+    file_ids: HashMap<FileId, String>,
     packages: HashMap<FileId, PackageEntry>,
 }
 
@@ -62,17 +63,22 @@ impl Vfs {
     pub fn new() -> Self {
         Self {
             files: HashMap::new(),
+            file_ids: HashMap::new(),
             packages: HashMap::new(),
         }
     }
 
     pub fn create(&mut self, path: String, mime: String, bytes: Vec<u8>) {
+        let id = FileId::new(None, VirtualPath::new(&path));
+        self.file_ids.insert(id, path.clone());
         let bytes = Bytes::new(bytes);
         self.files
             .insert(path.clone(), File::new(&path, mime, bytes));
     }
 
     pub fn delete(&mut self, path: &str) -> bool {
+        let id = FileId::new(None, VirtualPath::new(path));
+        self.file_ids.remove(&id);
         self.files.remove(path).is_some()
     }
 
@@ -83,6 +89,10 @@ impl Vfs {
         if let Some(m) = mime {
             file.mime = m;
         }
+        let old_id = FileId::new(None, VirtualPath::new(from));
+        self.file_ids.remove(&old_id);
+        let new_id = FileId::new(None, VirtualPath::new(to));
+        self.file_ids.insert(new_id, to.to_string());
         // Rebuild source with new id.
         let rebuilt = File::new(to, file.mime, file.bytes);
         self.files.insert(to.to_string(), rebuilt);
@@ -91,6 +101,7 @@ impl Vfs {
 
     pub fn clear(&mut self) {
         self.files.clear();
+        self.file_ids.clear();
         // Package caches survive a project clear: tarballs are immutable and
         // re-fetching them is expensive.
     }
@@ -100,29 +111,16 @@ impl Vfs {
     }
 
     pub fn known_ids(&self) -> Vec<FileId> {
-        self.files
-            .keys()
-            .map(|p| FileId::new(None, VirtualPath::new(p)))
-            .collect()
+        self.file_ids.keys().copied().collect()
     }
 
     pub fn find_by_id(&self, id: FileId) -> Option<(&str, &File)> {
         if id.package().is_some() {
             return None;
         }
-        for (path, file) in &self.files {
-            if let Some(src) = file.source() {
-                if src.id() == id {
-                    return Some((path.as_str(), file));
-                }
-            }
-            // Non-text files - match by VirtualPath.
-            let vp = VirtualPath::new(path.as_str());
-            if FileId::new(None, vp) == id {
-                return Some((path.as_str(), file));
-            }
-        }
-        None
+        let path = self.file_ids.get(&id)?;
+        let file = self.files.get(path)?;
+        Some((path.as_str(), file))
     }
 
     pub fn find_package(&self, id: FileId) -> Option<&PackageEntry> {

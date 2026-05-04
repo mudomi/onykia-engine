@@ -22,7 +22,6 @@ use crate::vfs::Vfs;
 pub struct OnykiaWorld {
     pub vfs: Vfs,
     pub main_path: Option<String>,
-    pub today: Option<Datetime>,
 
     /// Raw bytes of `index.json` per namespace
     package_indices: HashMap<EcoString, Vec<u8>>,
@@ -30,8 +29,8 @@ pub struct OnykiaWorld {
     indexed_packages: Vec<(PackageSpec, Option<EcoString>)>,
     /// Packages whose tarball has been unpacked into `vfs`.
     installed_packages: HashSet<PackageSpec>,
-    /// Packages whose fetch failed
-    failed_packages: HashSet<PackageSpec>,
+    /// Failed fetch attempts per package.
+    failed_packages: HashMap<PackageSpec, u8>,
     pending_packages: Mutex<HashSet<PackageSpec>>,
 
     library: LazyHash<Library>,
@@ -40,15 +39,16 @@ pub struct OnykiaWorld {
 }
 
 impl OnykiaWorld {
+    const MAX_PACKAGE_FETCH_RETRIES: u8 = 3;
+
     pub fn new() -> Self {
         let mut world = Self {
             vfs: Vfs::new(),
             main_path: None,
-            today: None,
             package_indices: HashMap::new(),
             indexed_packages: Vec::new(),
             installed_packages: HashSet::new(),
-            failed_packages: HashSet::new(),
+            failed_packages: HashMap::new(),
             pending_packages: Mutex::new(HashSet::new()),
             // Enable Feature::Html
             library: LazyHash::new(
@@ -123,8 +123,8 @@ impl OnykiaWorld {
     }
 
     /// Drain specs that World::file recorded as unresolved during the last
-    /// compile pass. Specs already known to have failed are skipped, so each
-    /// pass only re-asks for genuinely-new misses.
+    /// compile pass. Failed specs are retried up to
+    /// `MAX_PACKAGE_FETCH_RETRIES` times.
     pub fn take_pending_packages(&mut self) -> Vec<PackageSpec> {
         let drained: Vec<PackageSpec> = self
             .pending_packages
@@ -134,16 +134,18 @@ impl OnykiaWorld {
             .collect();
         drained
             .into_iter()
-            .filter(|s| !self.failed_packages.contains(s) && !self.installed_packages.contains(s))
+            .filter(|s| self.can_retry_package(s) && !self.installed_packages.contains(s))
             .collect()
     }
 
     pub fn mark_package_installed(&mut self, spec: PackageSpec) {
+        self.failed_packages.remove(&spec);
         self.installed_packages.insert(spec);
     }
 
     pub fn mark_package_failed(&mut self, spec: PackageSpec) {
-        self.failed_packages.insert(spec);
+        let attempts = self.failed_packages.entry(spec).or_insert(0);
+        *attempts = attempts.saturating_add(1);
     }
 
     fn main_id(&self) -> Option<FileId> {
@@ -153,7 +155,7 @@ impl OnykiaWorld {
 
     /// Resolve a file/source FileId that carries a package spec.
     fn package_status(&self, id: FileId, spec: &PackageSpec) -> PackageStatus {
-        if self.failed_packages.contains(spec) {
+        if !self.can_retry_package(spec) {
             return PackageStatus::FetchFailed;
         }
         if self.installed_packages.contains(spec) {
@@ -166,6 +168,12 @@ impl OnykiaWorld {
         }
         let _ = id;
         PackageStatus::Pending
+    }
+
+    fn can_retry_package(&self, spec: &PackageSpec) -> bool {
+        self.failed_packages
+            .get(spec)
+            .map_or(true, |attempts| *attempts < Self::MAX_PACKAGE_FETCH_RETRIES)
     }
 }
 
@@ -242,7 +250,7 @@ impl World for OnykiaWorld {
     }
 
     fn today(&self, _offset: Option<i64>) -> Option<Datetime> {
-        self.today
+        None
     }
 }
 

@@ -21,8 +21,7 @@ export function applyDiagnostics(
     cm.push({
       from: Math.min(fromByteOffset(docText, d.range.start), docLen),
       to: Math.min(fromByteOffset(docText, d.range.end), docLen),
-      severity: d.severity === 'misspelling' ? 'hint' : d.severity,
-      markClass: d.severity === 'misspelling' ? 'cm-typst-misspelling' : undefined,
+      severity: d.severity,
       message: d.message,
       renderMessage: d.hints?.length
         ? () => {

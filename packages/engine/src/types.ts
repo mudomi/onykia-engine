@@ -16,12 +16,10 @@ export interface HandlerOptions {
   numThreads?: number;
 }
 
-export type AskName = 'font' | 'package' | 'spellcheck';
+export type AskName = 'package';
 
 export interface AskArgs {
-  font: { file: string };
   package: { namespace: string; name: string; version: string };
-  spellcheck: { word: string; lang: string; region: string };
 }
 
 export type AskHandler = <K extends AskName>(name: K, args: AskArgs[K]) => Promise<Uint8Array>;
@@ -39,13 +37,12 @@ export interface Range {
 }
 
 export interface Diagnostic {
-  severity: 'error' | 'warning' | 'hint' | 'misspelling';
+  severity: 'error' | 'warning';
   message: string;
   range?: Range;
   path?: string;
   package?: string;
   id?: string;
-  payload?: string;
   hints?: string[];
 }
 
@@ -103,9 +100,7 @@ export interface TooltipResult {
   html: string;
 }
 
-export type DefinitionResult =
-  | { kind: 'source'; path: string; pos: number }
-  | { kind: 'url'; url: string };
+export type DefinitionResult = { kind: 'source'; path: string; pos: number };
 
 export type JumpResult =
   | { kind: 'position'; page: number; x: number; y: number }

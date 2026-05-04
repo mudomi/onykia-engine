@@ -19,6 +19,7 @@ EXAMPLE=example/public/assets
 WORKER_SHIM=src/rust/js/worker.js
 
 mkdir -p "$OUT"
+mkdir -p "$EXAMPLE"
 find "$OUT" -mindepth 1 -exec rm -rf {} +
 find "$EXAMPLE" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
 

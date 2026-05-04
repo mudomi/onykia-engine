@@ -21,7 +21,6 @@ typst-pdf = "0.14"
 typst-html = "0.14"
 typst-svg = "0.14"
 typst-render = "0.14"
-typst-eval = "0.14"
 typst-utils = "0.14"
 
 # WASM bridge. Version is pinned exactly because the wasm-bindgen runtime
