@@ -45,6 +45,7 @@ pub struct State {
     pub(crate) last_diagnostics: EcoVec<SourceDiagnostic>,
     pub(crate) silent_next_compile: Cell<bool>,
     pub(crate) in_flight_packages: HashSet<PackageSpec>,
+    pub(crate) in_flight_fonts: HashSet<usize>,
 }
 
 #[wasm_bindgen]
@@ -59,6 +60,7 @@ impl State {
             last_diagnostics: EcoVec::new(),
             silent_next_compile: Cell::new(false),
             in_flight_packages: HashSet::new(),
+            in_flight_fonts: HashSet::new(),
         }
     }
 }

@@ -80,7 +80,25 @@ fn dispatch_pending_fetches(state: &mut State) -> bool {
             state.world.mark_package_failed(spec);
         }
     }
-    !state.in_flight_packages.is_empty()
+    for (index, key) in state.world.take_pending_fonts() {
+        if state.in_flight_fonts.contains(&index) {
+            continue;
+        }
+        state.in_flight_fonts.insert(index);
+        if ask::request(
+            "font",
+            &FontFetchArgs {
+                key: key.to_string(),
+            },
+            Box::new(move |state, outcome| handle_font_response(state, index, outcome)),
+        )
+        .is_err()
+        {
+            state.in_flight_fonts.remove(&index);
+            state.world.mark_font_failed(index);
+        }
+    }
+    !state.in_flight_packages.is_empty() || !state.in_flight_fonts.is_empty()
 }
 
 fn handle_package_response(state: &mut State, spec: PackageSpec, outcome: Result<Vec<u8>, String>) {
@@ -96,9 +114,33 @@ fn handle_package_response(state: &mut State, spec: PackageSpec, outcome: Result
 
     // Retry only after the *last* outstanding fetch resolves so multiple
     // missing packages produce one recompile, not N.
-    if state.in_flight_packages.is_empty() {
+    rerun_if_idle(state);
+}
+
+fn handle_font_response(state: &mut State, index: usize, outcome: Result<Vec<u8>, String>) {
+    state.in_flight_fonts.remove(&index);
+
+    match outcome {
+        Ok(bytes) => {
+            if state.world.install_font(index, bytes).is_err() {
+                state.world.mark_font_failed(index);
+            }
+        }
+        Err(_) => state.world.mark_font_failed(index),
+    }
+
+    rerun_if_idle(state);
+}
+
+fn rerun_if_idle(state: &mut State) {
+    if state.in_flight_packages.is_empty() && state.in_flight_fonts.is_empty() {
         run(state);
     }
+}
+
+#[derive(Serialize)]
+struct FontFetchArgs {
+    key: String,
 }
 
 #[derive(Serialize)]
