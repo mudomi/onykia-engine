@@ -14,7 +14,7 @@ Used in [`onykia-editor`](https://github.com/mudomi/onykia-editor) and [`onykia-
 
 ## Prerequisites
 
-- **Rust stable**
+- **Rust nightly**
 - **wasm-bindgen-cli** - version-matched to the `wasm-bindgen` crate in
   `src/rust/Cargo.toml`.
 - **Node.js 20+** and **npm 10+**.
@@ -26,6 +26,19 @@ npm install
 npm run build:wasm
 npm run example:codemirror   # or example:monaco
 ```
+
+## Cross-origin isolation
+
+Loading onykia-engine requires a cross-origin-isolated host
+page, serve it with:
+
+```
+Cross-Origin-Opener-Policy:   same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without these headers `createWasmFactory()` throws synchronously with a
+message pointing at this section. See [SharedArrayBuffer requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer).
 
 ## Known gaps
 

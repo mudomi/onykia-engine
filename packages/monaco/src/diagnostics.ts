@@ -47,9 +47,7 @@ export function diagnosticsSubscription(
 
 function toMonacoSeverity(s: Diagnostic['severity']): monaco.MarkerSeverity {
   switch (s) {
-    case 'error':       return monaco.MarkerSeverity.Error;
-    case 'warning':     return monaco.MarkerSeverity.Warning;
-    case 'misspelling': return monaco.MarkerSeverity.Info;
-    default:            return monaco.MarkerSeverity.Hint;
+    case 'error': return monaco.MarkerSeverity.Error;
+    case 'warning': return monaco.MarkerSeverity.Warning;
   }
 }

@@ -25,7 +25,7 @@ const highlightField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(decos, tr) {
     if (tr.docChanged) {
-      decos = Decoration.none;
+      decos = decos.map(tr.changes);
     }
     for (const effect of tr.effects) {
       if (effect.is(setHighlightEffect)) decos = effect.value;

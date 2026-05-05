@@ -19,8 +19,14 @@ export function fromByteOffset(text: string, byteOffset: number): number {
   while (i < text.length && bytes < byteOffset) {
     const code = text.charCodeAt(i);
     if (code >= 0xd800 && code <= 0xdbff) {
-      bytes += 4;
-      i += 2;
+      const next = text.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        bytes += 4;
+        i += 2;
+      } else {
+        bytes += 3;
+        i++;
+      }
     } else if (code >= 0x800) {
       bytes += 3;
       i++;
