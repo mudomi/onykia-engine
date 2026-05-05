@@ -78,10 +78,7 @@ impl OnykiaWorld {
     /// is a self-contained sfnt parse, so this scales cleanly across the
     /// rayon pool initialised by `wasm_bindgen_rayon::init_thread_pool`.
     fn add_font_files(&mut self, files: Vec<Bytes>) {
-        let parsed: Vec<Font> = files
-            .into_par_iter()
-            .flat_map(parse_font_file)
-            .collect();
+        let parsed: Vec<Font> = files.into_par_iter().flat_map(parse_font_file).collect();
         self.font_slots.extend(parsed);
         self.rebuild_book();
     }

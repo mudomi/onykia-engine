@@ -26,7 +26,11 @@ impl File {
 
     fn with_id(id: FileId, mime: String, bytes: Bytes) -> Self {
         let source = build_source(id, &mime, &bytes);
-        Self { mime, bytes, source }
+        Self {
+            mime,
+            bytes,
+            source,
+        }
     }
 
     pub fn source(&self) -> Option<&Source> {

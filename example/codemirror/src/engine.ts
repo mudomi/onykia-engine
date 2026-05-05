@@ -23,7 +23,6 @@ export async function createEngine(): Promise<Core> {
   const core = new Core({
     wasm,
     package: fetchPackage,
-    spellcheck: async () => true,
   });
 
   // Forward the public preview index so autocomplete and version-resolution

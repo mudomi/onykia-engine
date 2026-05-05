@@ -23,7 +23,6 @@ export async function createEngine(): Promise<Core> {
   const core = new Core({
     wasm,
     package: fetchPackage,
-    spellcheck: async () => true,
   });
 
   void loadPreviewIndex(core).catch(err =>
