@@ -16,13 +16,28 @@ export interface HandlerOptions {
   numThreads?: number;
 }
 
-export type AskName = 'package';
+export type AskName = 'package' | 'font';
 
 export interface AskArgs {
   package: { namespace: string; name: string; version: string };
+  font: { key: string };
 }
 
 export type AskHandler = <K extends AskName>(name: K, args: AskArgs[K]) => Promise<Uint8Array>;
+
+export type FontStyle = 'normal' | 'italic' | 'oblique';
+
+export interface FontStub {
+  /** Family name as it should appear in autocomplete and `#text(font: ...)`. */
+  family: string;
+  /** Opaque identifier passed back to the host's `font` ask handler. */
+  key: string;
+  style?: FontStyle;
+  /** OpenType weight, 100..=900 (400 = regular, 700 = bold). */
+  weight?: number;
+  /** OpenType-style stretch number 1..=9 (5 = normal). */
+  stretch?: number;
+}
 
 export type NotifyName = 'status' | 'diagnostics' | 'outline' | 'pages';
 

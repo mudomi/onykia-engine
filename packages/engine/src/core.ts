@@ -1,10 +1,12 @@
 import { Handler } from './handler.js';
 import type {
+  AskArgs,
   AskHandler,
   AutocompleteResult,
   DefinitionResult,
   ExportResult,
   ExportTarget,
+  FontStub,
   HandlerOptions,
   HighlightResult,
   JumpResult,
@@ -23,6 +25,12 @@ export interface CoreOptions {
     name: string,
     version: string,
   ) => Promise<Uint8Array | ArrayBuffer>;
+  /**
+   * Resolves a lazy-loaded font binary. Called the first time the compiler
+   * actually needs the bytes for a stub registered via `addFontStubs`.
+   * `key` is the opaque value the host supplied with the stub.
+   */
+  font?: (key: string) => Promise<Uint8Array | ArrayBuffer>;
   handlerOptions?: HandlerOptions;
 }
 
@@ -42,7 +50,14 @@ export class Core {
       switch (name) {
         case 'package': {
           if (!options.package) throw new Error('no package loader configured');
-          const bytes = await options.package(args.namespace, args.name, args.version);
+          const { namespace, name, version } = args as AskArgs['package'];
+          const bytes = await options.package(namespace, name, version);
+          return toU8(bytes);
+        }
+        case 'font': {
+          if (!options.font) throw new Error('no font loader configured');
+          const { key } = args as AskArgs['font'];
+          const bytes = await options.font(key);
           return toU8(bytes);
         }
       }
@@ -134,6 +149,15 @@ export class Core {
   /** Register multiple font files in one round-trip, rebuilding the font book once. */
   addFonts(fonts: Uint8Array[]): Promise<void> {
     return this.dispatchStateful('addFonts', { fonts });
+  }
+
+  /**
+   * Register fonts by name without supplying their binaries. Stubs appear in
+   * autocomplete and the font book immediately; the binary is fetched via the
+   * `font` ask handler the first time the compiler resolves the slot.
+   */
+  addFontStubs(stubs: FontStub[]): Promise<void> {
+    return this.dispatchStateful('addFontStubs', { stubs });
   }
 
   setRemotePackages(data: Uint8Array, privateNamespaces: { namespace: string; data: Uint8Array }[] = []): Promise<void> {

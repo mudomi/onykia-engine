@@ -9,6 +9,8 @@ export type {
   AskName,
   AskArgs,
   AskHandler,
+  FontStyle,
+  FontStub,
   NotifyName,
   NotifyPayloads,
   NotifyHandler,

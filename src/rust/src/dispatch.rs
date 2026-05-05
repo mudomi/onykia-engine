@@ -30,6 +30,7 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         "setMain" => handle_set_main(state, args).map(|_| JsValue::UNDEFINED),
         "addFont" => handle_add_font(state, args).map(|_| JsValue::UNDEFINED),
         "addFonts" => handle_add_fonts(state, args).map(|_| JsValue::UNDEFINED),
+        "addFontStubs" => handle_add_font_stubs(state, args).map(|_| JsValue::UNDEFINED),
         "setRemotePackages" => handle_set_packages(state, args).map(|_| JsValue::UNDEFINED),
         "configureSpellCheck" => Ok(JsValue::UNDEFINED), // Spellcheck delegated to JS.
 
@@ -80,6 +81,7 @@ fn is_compile_trigger(name: &str) -> bool {
             | "setMain"
             | "addFont"
             | "addFonts"
+            | "addFontStubs"
             | "setRemotePackages"
     )
 }
@@ -185,6 +187,54 @@ fn handle_add_fonts(state: &mut State, args: JsValue) -> Result<(), String> {
     state
         .world
         .add_fonts(args.fonts.into_iter().map(|b| b.into_vec()).collect());
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct FontStubArg {
+    family: String,
+    key: String,
+    #[serde(default)]
+    style: Option<String>,
+    #[serde(default)]
+    weight: Option<u16>,
+    /// OpenType-style stretch number 1..=9 (5 = normal).
+    #[serde(default)]
+    stretch: Option<u16>,
+}
+
+#[derive(Deserialize)]
+struct AddFontStubsArgs {
+    stubs: Vec<FontStubArg>,
+}
+
+fn handle_add_font_stubs(state: &mut State, args: JsValue) -> Result<(), String> {
+    use typst::text::{FontStretch, FontStyle, FontWeight};
+    let args: AddFontStubsArgs = from_js(args)?;
+    let stubs = args
+        .stubs
+        .into_iter()
+        .map(|s| {
+            let style = s
+                .style
+                .as_deref()
+                .map(|raw| match raw {
+                    "normal" => Ok(FontStyle::Normal),
+                    "italic" => Ok(FontStyle::Italic),
+                    "oblique" => Ok(FontStyle::Oblique),
+                    other => Err(format!("addFontStubs: unknown style '{other}'")),
+                })
+                .transpose()?;
+            Ok::<_, String>(crate::world::FontStub {
+                family: s.family,
+                key: s.key.into(),
+                style,
+                weight: s.weight.map(FontWeight::from_number),
+                stretch: s.stretch.map(FontStretch::from_number),
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    state.world.add_font_stubs(stubs);
     Ok(())
 }
 
