@@ -170,7 +170,7 @@ impl OnykiaWorld {
     fn can_retry_package(&self, spec: &PackageSpec) -> bool {
         self.failed_packages
             .get(spec)
-            .map_or(true, |attempts| *attempts < Self::MAX_PACKAGE_FETCH_RETRIES)
+            .is_none_or(|attempts| *attempts < Self::MAX_PACKAGE_FETCH_RETRIES)
     }
 }
 
