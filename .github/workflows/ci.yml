@@ -17,8 +17,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
+
+      - name: Verify package-lock.json is in sync with package.json
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          git diff --exit-code -- package-lock.json package.json 'packages/*/package.json' 'example/*/package.json'
 
       - run: npm ci
 
