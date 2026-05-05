@@ -27,9 +27,16 @@ export function fromByteOffset(text: string, byteOffset: number): number {
   while (i < text.length && bytes < byteOffset) {
     const code = text.charCodeAt(i);
     if (code >= 0xd800 && code <= 0xdbff) {
-      // Surrogate pair --> U+10000–U+10FFFF --> 4 UTF-8 bytes, 2 UTF-16 units.
-      bytes += 4;
-      i += 2;
+      const next = text.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        // Surrogate pair --> U+10000–U+10FFFF --> 4 UTF-8 bytes, 2 UTF-16 units.
+        bytes += 4;
+        i += 2;
+      } else {
+        // Lone high surrogate encodes as U+FFFD in UTF-8 (3 bytes).
+        bytes += 3;
+        i++;
+      }
     } else if (code >= 0x800) {
       bytes += 3;
       i++;
@@ -60,11 +67,18 @@ export function buildByteToCharMap(text: string): Uint32Array {
     const code = text.charCodeAt(charIdx);
     map[byteIdx] = charIdx;
     if (code >= 0xd800 && code <= 0xdbff) {
-      map[byteIdx + 1] = charIdx;
-      map[byteIdx + 2] = charIdx;
-      map[byteIdx + 3] = charIdx;
-      byteIdx += 4;
-      charIdx++; // consume the low surrogate
+      const next = text.charCodeAt(charIdx + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        map[byteIdx + 1] = charIdx;
+        map[byteIdx + 2] = charIdx;
+        map[byteIdx + 3] = charIdx;
+        byteIdx += 4;
+        charIdx++; // consume the low surrogate
+      } else {
+        map[byteIdx + 1] = charIdx;
+        map[byteIdx + 2] = charIdx;
+        byteIdx += 3;
+      }
     } else if (code >= 0x800) {
       map[byteIdx + 1] = charIdx;
       map[byteIdx + 2] = charIdx;

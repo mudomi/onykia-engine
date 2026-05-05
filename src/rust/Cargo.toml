@@ -21,7 +21,6 @@ typst-pdf = "0.14"
 typst-html = "0.14"
 typst-svg = "0.14"
 typst-render = "0.14"
-typst-eval = "0.14"
 typst-utils = "0.14"
 
 # WASM bridge. Version is pinned exactly because the wasm-bindgen runtime
@@ -46,6 +45,15 @@ console_error_panic_hook = { version = "0.1", optional = true }
 
 # Random source inside wasm (typst's dependencies transitively pull getrandom).
 getrandom = { version = "0.2", features = ["js"] }
+
+# threads
+wasm-bindgen-rayon = "1.3"
+rayon = "1"
+
+# Package archive decoding. `rust_backend` keeps flate2 off C zlib so it links
+# on wasm32-unknown-unknown.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+tar = { version = "0.4", default-features = false }
 
 [features]
 default = ["panic-hook"]

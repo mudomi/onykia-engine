@@ -6,22 +6,20 @@ export interface WasmFactory {
 }
 
 export interface HandlerOptions {
-  /** Initial shared-memory pages (64 KB each). Default: 256 (16 MB). */
+  /** Initial shared-memory pages (64 KB each). Default: 512 (32 MB). */
   initMemory?: number;
-  /** Maximum shared-memory pages. Default: 65536 (4 GB). */
+  /** Maximum shared-memory pages (64 KB each). Default: 16384 (1 GB) — matches the WASM `--max-memory` link flag. */
   maxMemory?: number;
   /** Reject outstanding promises when the handler is destroyed. Default: true. */
   rejectOnDestruction?: boolean;
-  /** Override the thread count. Default: `min(hardwareConcurrency, 16)`. */
+  /** rayon thread-pool size. Default: `min(hardwareConcurrency, 16)`. Floored, clamped to `[1, 16]`. */
   numThreads?: number;
 }
 
-export type AskName = 'font' | 'package' | 'spellcheck';
+export type AskName = 'package';
 
 export interface AskArgs {
-  font: { file: string };
   package: { namespace: string; name: string; version: string };
-  spellcheck: { word: string; lang: string; region: string };
 }
 
 export type AskHandler = <K extends AskName>(name: K, args: AskArgs[K]) => Promise<Uint8Array>;
@@ -39,13 +37,12 @@ export interface Range {
 }
 
 export interface Diagnostic {
-  severity: 'error' | 'warning' | 'hint' | 'misspelling';
+  severity: 'error' | 'warning';
   message: string;
   range?: Range;
   path?: string;
   package?: string;
   id?: string;
-  payload?: string;
   hints?: string[];
 }
 
@@ -103,9 +100,7 @@ export interface TooltipResult {
   html: string;
 }
 
-export type DefinitionResult =
-  | { kind: 'source'; path: string; pos: number }
-  | { kind: 'url'; url: string };
+export type DefinitionResult = { kind: 'source'; path: string; pos: number };
 
 export type JumpResult =
   | { kind: 'position'; page: number; x: number; y: number }

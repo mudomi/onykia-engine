@@ -1,6 +1,6 @@
 //! Dispatch table for the named request protocol.
 
-mod compile;
+pub mod compile;
 mod export;
 mod ide;
 mod notify;
@@ -8,7 +8,7 @@ mod notify;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
-use crate::protocol::{from_js, post_error, post_response};
+use crate::protocol::{from_js, post_failure, post_result};
 use crate::state::{State, Target};
 
 pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
@@ -27,9 +27,7 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
 
         // ─── Compiler config ─────────────────────────────────────────────
         "setTarget" => handle_set_target(state, args).map(|_| JsValue::UNDEFINED),
-        "setFeatures" => handle_set_features(state, args).map(|_| JsValue::UNDEFINED),
         "setMain" => handle_set_main(state, args).map(|_| JsValue::UNDEFINED),
-        "setProjectId" => handle_set_project_id(state, args).map(|_| JsValue::UNDEFINED),
         "addFont" => handle_add_font(state, args).map(|_| JsValue::UNDEFINED),
         "addFonts" => handle_add_fonts(state, args).map(|_| JsValue::UNDEFINED),
         "setRemotePackages" => handle_set_packages(state, args).map(|_| JsValue::UNDEFINED),
@@ -54,7 +52,7 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         "export" => export::export(state, args),
         "render" => export::render(state, args),
         "archive" => export::archive(state, args),
-        "eval" => Ok(JsValue::NULL), // requires typst >= 0.15
+        "eval" => Err("eval not implemented".into()), // requires typst >= 0.15
 
         _ => Err(format!("unknown request: {name}")),
     };
@@ -65,8 +63,8 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
     }
 
     match result {
-        Ok(value) => post_response(id, value),
-        Err(err) => post_error(id, &err),
+        Ok(value) => post_result(id, value),
+        Err(err) => post_failure(id, &err),
     }
 }
 
@@ -79,7 +77,6 @@ fn is_compile_trigger(name: &str) -> bool {
             | "delete"
             | "clear"
             | "setTarget"
-            | "setFeatures"
             | "setMain"
             | "addFont"
             | "addFonts"
@@ -157,16 +154,6 @@ fn handle_set_target(state: &mut State, args: JsValue) -> Result<(), String> {
 }
 
 #[derive(Deserialize)]
-struct SetFeaturesArgs {
-    features: Vec<String>,
-}
-fn handle_set_features(state: &mut State, args: JsValue) -> Result<(), String> {
-    let args: SetFeaturesArgs = from_js(args)?;
-    state.features = args.features;
-    Ok(())
-}
-
-#[derive(Deserialize)]
 struct SetMainArgs {
     path: String,
     #[serde(default)]
@@ -176,16 +163,6 @@ fn handle_set_main(state: &mut State, args: JsValue) -> Result<(), String> {
     let args: SetMainArgs = from_js(args)?;
     state.world.main_path = Some(args.path);
     state.silent_next_compile.set(args.silent);
-    Ok(())
-}
-
-#[derive(Deserialize)]
-struct SetProjectIdArgs {
-    id: String,
-}
-fn handle_set_project_id(state: &mut State, args: JsValue) -> Result<(), String> {
-    let args: SetProjectIdArgs = from_js(args)?;
-    state.project_id = Some(args.id);
     Ok(())
 }
 
@@ -211,8 +188,30 @@ fn handle_add_fonts(state: &mut State, args: JsValue) -> Result<(), String> {
     Ok(())
 }
 
-fn handle_set_packages(_state: &mut State, _args: JsValue) -> Result<(), String> {
-    // The compiler fetches packages lazily via ask(); JS owns the index.
+#[derive(Deserialize)]
+struct NamespacedIndex {
+    namespace: String,
+    data: serde_bytes::ByteBuf,
+}
+
+#[derive(Deserialize)]
+struct SetPackagesArgs {
+    /// Bytes of the public `preview` namespace's `index.json`.
+    data: serde_bytes::ByteBuf,
+    #[serde(default)]
+    private_namespaces: Vec<NamespacedIndex>,
+}
+
+fn handle_set_packages(state: &mut State, args: JsValue) -> Result<(), String> {
+    let args: SetPackagesArgs = from_js(args)?;
+    state
+        .world
+        .set_package_index("preview".into(), args.data.into_vec());
+    for entry in args.private_namespaces {
+        state
+            .world
+            .set_package_index(entry.namespace.into(), entry.data.into_vec());
+    }
     Ok(())
 }
 

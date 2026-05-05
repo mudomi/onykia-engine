@@ -1,6 +1,7 @@
 export { Core } from './core.js';
-export { defaultWasmFactory } from './wasm.js';
+export { createWasmFactory, assertCrossOriginIsolated } from './wasm.js';
 export type { CoreOptions } from './core.js';
+export type { WasmFactoryOptions } from './wasm.js';
 export type {
   ExportTarget,
   WasmFactory,

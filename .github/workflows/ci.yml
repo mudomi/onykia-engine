@@ -42,8 +42,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+          components: rustfmt
+
+      # wasm-bindgen-rayon requires +atomics,+bulk-memory which in turn need
+      # `-Z build-std`, so clippy on the wasm target has to run on nightly.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
           targets: wasm32-unknown-unknown
-          components: rustfmt, clippy
+          components: clippy, rust-src
 
       - uses: Swatinem/rust-cache@v2
 
@@ -52,7 +59,12 @@ jobs:
         run: cargo fmt --check
 
       - name: Clippy
-        run: cargo clippy --target wasm32-unknown-unknown -p onykia_core --all-targets -- -D warnings
+        env:
+          RUSTFLAGS: "-C target-feature=+atomics,+bulk-memory -C link-arg=--shared-memory -C link-arg=--max-memory=1073741824 -C link-arg=--import-memory -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base"
+        run: |
+          cargo +nightly clippy --target wasm32-unknown-unknown \
+            -Z build-std=panic_abort,std \
+            -p onykia_core --all-targets -- -D warnings
 
       - name: Install wasm-bindgen-cli
         # Match the version Cargo resolved for the `wasm-bindgen` crate so the

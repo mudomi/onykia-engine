@@ -1,15 +1,17 @@
 //! Virtual filesystem that backs the [`crate::world::OnykiaWorld`].
 //!
-//! Paths are stored as absolute POSIX strings ("/main.typ"). File contents
-//! are kept as raw bytes; text-mime files are parsed into `typst_syntax::Source`
-//! on demand and cached until the next edit.
+//! Project files are keyed by absolute POSIX path ("/main.typ"); package
+//! files are keyed by their interned `FileId` (which carries the spec). Text
+//! sources are parsed into `typst_syntax::Source` once and cached until the
+//! next edit.
 
 use std::collections::HashMap;
 
 use typst::foundations::Bytes;
+use typst::syntax::package::PackageSpec;
 use typst::syntax::{FileId, Source, VirtualPath};
 
-/// A single file tracked by the VFS.
+/// A single project file tracked by the VFS.
 pub struct File {
     pub mime: String,
     pub bytes: Bytes,
@@ -18,22 +20,36 @@ pub struct File {
 
 impl File {
     pub fn new(path: &str, mime: String, bytes: Bytes) -> Self {
-        let mut file = Self {
-            mime,
-            bytes,
-            source: None,
-        };
-        file.source = file.build_source(path);
-        file
+        let id = FileId::new(None, VirtualPath::new(path));
+        Self::with_id(id, mime, bytes)
     }
 
-    fn build_source(&self, path: &str) -> Option<Source> {
-        if !is_typst_mime(&self.mime) {
-            return None;
+    fn with_id(id: FileId, mime: String, bytes: Bytes) -> Self {
+        let source = build_source(id, &mime, &bytes);
+        Self {
+            mime,
+            bytes,
+            source,
         }
-        let text = std::str::from_utf8(self.bytes.as_ref()).ok()?.to_string();
-        let id = FileId::new(None, VirtualPath::new(path));
-        Some(Source::new(id, text))
+    }
+
+    pub fn source(&self) -> Option<&Source> {
+        self.source.as_ref()
+    }
+}
+
+/// A file extracted from a package tarball. Mime is inferred from the path
+/// suffix because tar entries don't carry one.
+pub struct PackageEntry {
+    pub bytes: Bytes,
+    source: Option<Source>,
+}
+
+impl PackageEntry {
+    fn new(id: FileId, bytes: Bytes) -> Self {
+        let mime = mime_for_vpath(id.vpath());
+        let source = build_source(id, mime, &bytes);
+        Self { bytes, source }
     }
 
     pub fn source(&self) -> Option<&Source> {
@@ -43,22 +59,30 @@ impl File {
 
 pub struct Vfs {
     files: HashMap<String, File>,
+    file_ids: HashMap<FileId, String>,
+    packages: HashMap<FileId, PackageEntry>,
 }
 
 impl Vfs {
     pub fn new() -> Self {
         Self {
             files: HashMap::new(),
+            file_ids: HashMap::new(),
+            packages: HashMap::new(),
         }
     }
 
     pub fn create(&mut self, path: String, mime: String, bytes: Vec<u8>) {
+        let id = FileId::new(None, VirtualPath::new(&path));
+        self.file_ids.insert(id, path.clone());
         let bytes = Bytes::new(bytes);
         self.files
             .insert(path.clone(), File::new(&path, mime, bytes));
     }
 
     pub fn delete(&mut self, path: &str) -> bool {
+        let id = FileId::new(None, VirtualPath::new(path));
+        self.file_ids.remove(&id);
         self.files.remove(path).is_some()
     }
 
@@ -69,6 +93,10 @@ impl Vfs {
         if let Some(m) = mime {
             file.mime = m;
         }
+        let old_id = FileId::new(None, VirtualPath::new(from));
+        self.file_ids.remove(&old_id);
+        let new_id = FileId::new(None, VirtualPath::new(to));
+        self.file_ids.insert(new_id, to.to_string());
         // Rebuild source with new id.
         let rebuilt = File::new(to, file.mime, file.bytes);
         self.files.insert(to.to_string(), rebuilt);
@@ -77,6 +105,9 @@ impl Vfs {
 
     pub fn clear(&mut self) {
         self.files.clear();
+        self.file_ids.clear();
+        // Package caches survive a project clear: tarballs are immutable and
+        // re-fetching them is expensive.
     }
 
     pub fn get(&self, path: &str) -> Option<&File> {
@@ -84,26 +115,27 @@ impl Vfs {
     }
 
     pub fn known_ids(&self) -> Vec<FileId> {
-        self.files
-            .keys()
-            .map(|p| FileId::new(None, VirtualPath::new(p)))
-            .collect()
+        self.file_ids.keys().copied().collect()
     }
 
     pub fn find_by_id(&self, id: FileId) -> Option<(&str, &File)> {
-        for (path, file) in &self.files {
-            if let Some(src) = file.source() {
-                if src.id() == id {
-                    return Some((path.as_str(), file));
-                }
-            }
-            // Non-text files - match by VirtualPath.
-            let vp = VirtualPath::new(path.as_str());
-            if FileId::new(None, vp) == id {
-                return Some((path.as_str(), file));
-            }
+        if id.package().is_some() {
+            return None;
         }
-        None
+        let path = self.file_ids.get(&id)?;
+        let file = self.files.get(path)?;
+        Some((path.as_str(), file))
+    }
+
+    pub fn find_package(&self, id: FileId) -> Option<&PackageEntry> {
+        self.packages.get(&id)
+    }
+
+    /// Mount one entry of a package tarball under its interned `FileId`.
+    pub fn install_package_file(&mut self, spec: &PackageSpec, vpath: &str, bytes: Vec<u8>) {
+        let id = FileId::new(Some(spec.clone()), VirtualPath::new(vpath));
+        self.packages
+            .insert(id, PackageEntry::new(id, Bytes::new(bytes)));
     }
 
     pub fn edit(&mut self, path: &str, edits: &[Edit]) -> Result<(), String> {
@@ -140,6 +172,28 @@ pub struct Range {
     pub end: usize,
 }
 
+fn build_source(id: FileId, mime: &str, bytes: &Bytes) -> Option<Source> {
+    if !is_typst_mime(mime) {
+        return None;
+    }
+    let text = std::str::from_utf8(bytes.as_ref()).ok()?.to_string();
+    Some(Source::new(id, text))
+}
+
 fn is_typst_mime(mime: &str) -> bool {
     matches!(mime, "text/x-typst" | "application/typst" | "text/plain")
+}
+
+/// Tar entries don't carry a mime; infer one from the extension so package
+/// `.typ`/`.typc` files become parseable Typst sources.
+fn mime_for_vpath(vpath: &VirtualPath) -> &'static str {
+    let ext = vpath
+        .as_rooted_path()
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
+    match ext {
+        "typ" | "typc" => "text/x-typst",
+        _ => "application/octet-stream",
+    }
 }
