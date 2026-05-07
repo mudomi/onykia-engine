@@ -24,8 +24,16 @@ bindTypst(core, model, PATH);
 
 core.onPages(async ({ pages }) => {
   if (pages.length === 0) return;
-  const res = await core.export({ format: 'svg' });
-  previewEl.innerHTML = new TextDecoder().decode(res.data);
+
+  const decoder = new TextDecoder();
+  const svgs = await Promise.all(
+    pages.map(async (_, index) => {
+      const res = await core.export({ format: 'svg', index });
+      return decoder.decode(res.data);
+    }),
+  );
+
+  previewEl.innerHTML = svgs.join('\n');
 });
 
 await core.setMain(PATH);

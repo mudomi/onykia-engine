@@ -3,20 +3,29 @@ import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { lintGutter } from '@codemirror/lint';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
-import { paint } from '@mudomi/onykia-engine';
+import { renderToCanvas, type PageInfo } from '@mudomi/onykia-engine';
 import { createEngine } from './engine.js';
 
 const PATH = '/main.typ';
 const INITIAL = `= Hello, Onykia x CodeMirror
 $ integral_0^1 x^2 dif x = 1/3 $
+
+#pagebreak()
+
+= Page two
+A second page so multi-page rendering is visible.
 `;
 
 type PreviewFormat = 'svg' | 'canvas' | 'html';
+type ExportFormat = 'pdf' | 'svg' | 'png';
 
-const editorEl = document.getElementById('editor')!;
-const previewEl = document.getElementById('preview')!;
-const formatSelect = document.getElementById('format') as HTMLSelectElement;
-const exportButton = document.getElementById('export') as HTMLButtonElement;
+const editorEl = byId('editor');
+const previewEl = byId('preview');
+const previewSelect = byId<HTMLSelectElement>('preview-format');
+const exportFormatSelect = byId<HTMLSelectElement>('export-format');
+const exportPageSelect = byId<HTMLSelectElement>('export-page');
+const exportPageLabel = byId('export-page-label');
+const exportButton = byId<HTMLButtonElement>('export-button');
 
 const core = await createEngine();
 await core.create(PATH, 'text/x-typst', INITIAL);
@@ -36,62 +45,125 @@ const view = new EditorView({
   }),
 });
 
-let pageCount = 0;
+let pages: PageInfo[] = [];
 
 core.onDiagnostics(({ diagnostics }) => applyDiagnostics(view, diagnostics, PATH));
-core.onPages(({ pages }) => {
-  pageCount = pages.length;
-  if (pageCount > 0) void refreshPreview();
+core.onPages(({ pages: next }) => {
+  pages = next;
+  syncExportControls();
+  if (pages.length > 0) void refreshPreview();
 });
 
-formatSelect.addEventListener('change', () => {
-  if (pageCount > 0) void refreshPreview();
+previewSelect.addEventListener('change', () => {
+  if (pages.length > 0) void refreshPreview();
 });
+exportFormatSelect.addEventListener('change', syncExportControls);
+exportButton.addEventListener('click', () => void downloadExport());
 
-exportButton.addEventListener('click', () => void downloadPdf());
+// The canvas renderer takes its zoom from the container's current width, so
+// re-render whenever the preview pane resizes. Coalesce to one re-render per
+// frame; ResizeObserver can fire many times during a window drag.
+let resizeRaf = 0;
+new ResizeObserver(() => {
+  if (resizeRaf !== 0) return;
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0;
+    if (previewSelect.value === 'canvas' && pages.length > 0) void renderCanvasPreview();
+  });
+}).observe(previewEl);
 
 await core.setMain(PATH);
 await core.setTarget('svg');
 
+// ─── preview ──────────────────────────────────────────────────────────────
+
 async function refreshPreview(): Promise<void> {
-  const format = formatSelect.value as PreviewFormat;
-  if (format === 'canvas') {
-    await renderCanvas();
-  } else if (format === 'html') {
-    await renderHtml();
-  } else {
-    await renderSvg();
+  const format = previewSelect.value as PreviewFormat;
+  switch (format) {
+    case 'canvas': return renderCanvasPreview();
+    case 'html':   return renderHtmlPreview();
+    case 'svg':    return renderSvgPreview();
   }
 }
 
-async function renderSvg(): Promise<void> {
-  const res = await core.export({ format: 'svg' });
-  previewEl.innerHTML = new TextDecoder().decode(res.data);
+async function renderSvgPreview(): Promise<void> {
+  const decoder = new TextDecoder();
+  const svgs = await Promise.all(
+    pages.map(async (_, index) => {
+      const res = await core.export({ format: 'svg', index });
+      return decoder.decode(res.data);
+    }),
+  );
+  previewEl.innerHTML = svgs.join('\n');
 }
 
-async function renderCanvas(): Promise<void> {
-  const canvas = document.createElement('canvas');
-  previewEl.replaceChildren(canvas);
-  const result = await core.render(0, 2);
-  paint(canvas, result);
+async function renderCanvasPreview(): Promise<void> {
+  await renderToCanvas(core, { container: previewEl, pages, fit: 'width' });
 }
 
-async function renderHtml(): Promise<void> {
+async function renderHtmlPreview(): Promise<void> {
   const res = await core.export({ format: 'html' });
+
   const iframe = document.createElement('iframe');
   iframe.srcdoc = new TextDecoder().decode(res.data);
   previewEl.replaceChildren(iframe);
 }
 
-async function downloadPdf(): Promise<void> {
-  const res = await core.export({ format: 'pdf' });
-  const bytes = new Uint8Array(res.data);
-  const url = URL.createObjectURL(new Blob([bytes], { type: res.mime }));
+// ─── export ───────────────────────────────────────────────────────────────
+
+function syncExportControls(): void {
+  const format = exportFormatSelect.value as ExportFormat;
+  const needsPage = format !== 'pdf';
+
+  exportPageSelect.hidden = !needsPage;
+  exportPageLabel.hidden = !needsPage;
+  exportButton.disabled = pages.length === 0;
+
+  rebuildPageOptions();
+}
+
+function rebuildPageOptions(): void {
+  const previous = Number(exportPageSelect.value) || 1;
+  const options = pages.map((_, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i + 1);
+    opt.textContent = `Page ${i + 1}`;
+    return opt;
+  });
+  exportPageSelect.replaceChildren(...options);
+
+  const restored = Math.min(previous, pages.length) || 1;
+  exportPageSelect.value = String(restored);
+}
+
+async function downloadExport(): Promise<void> {
+  if (pages.length === 0) return;
+
+  const format = exportFormatSelect.value as ExportFormat;
+  const args = format === 'pdf'
+    ? { format: 'pdf' as const }
+    : { format, index: Number(exportPageSelect.value) - 1 };
+
+  const res = await core.export(args);
+  const suffix = format === 'pdf' ? '' : `-p${Number(exportPageSelect.value)}`;
+  triggerDownload(res.data, res.mime, `onykia${suffix}.${format}`);
+}
+
+function triggerDownload(data: Uint8Array, mime: string, filename: string): void {
+  const url = URL.createObjectURL(new Blob([new Uint8Array(data)], { type: mime }));
 
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'onykia.pdf';
+  link.download = filename;
   link.click();
 
   URL.revokeObjectURL(url);
+}
+
+// ─── helpers ──────────────────────────────────────────────────────────────
+
+function byId<T extends HTMLElement = HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`#${id} missing from DOM`);
+  return el as T;
 }
