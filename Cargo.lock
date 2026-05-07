@@ -1348,6 +1348,7 @@ dependencies = [
  "flate2",
  "getrandom",
  "js-sys",
+ "parking_lot_core",
  "rayon",
  "serde",
  "serde-wasm-bindgen",

@@ -1,7 +1,7 @@
 //! Export / render / archive handlers.
 
 use serde::{Deserialize, Serialize};
-use typst::layout::PagedDocument;
+use typst::layout::{Page, PagedDocument};
 use typst_html::HtmlDocument;
 use wasm_bindgen::prelude::*;
 
@@ -12,8 +12,11 @@ use crate::state::State;
 #[serde(tag = "format", rename_all = "lowercase")]
 pub enum ExportArgs {
     Pdf,
-    Svg,
+    Svg {
+        index: usize,
+    },
     Png {
+        index: usize,
         #[serde(default)]
         ppi: Option<f32>,
     },
@@ -32,8 +35,8 @@ pub fn export(state: &mut State, args: JsValue) -> Result<JsValue, String> {
 
     let response = match args {
         ExportArgs::Pdf => export_pdf(require_paged(state)?)?,
-        ExportArgs::Svg => export_svg(require_paged(state)?),
-        ExportArgs::Png { ppi } => export_png(require_paged(state)?, ppi)?,
+        ExportArgs::Svg { index } => export_svg(page_at(require_paged(state)?, index)?),
+        ExportArgs::Png { index, ppi } => export_png(page_at(require_paged(state)?, index)?, ppi)?,
         ExportArgs::Html => export_html(state)?,
     };
 
@@ -47,6 +50,12 @@ fn require_paged(state: &State) -> Result<&PagedDocument, String> {
         .ok_or_else(|| "no document compiled".to_string())
 }
 
+fn page_at(doc: &PagedDocument, index: usize) -> Result<&Page, String> {
+    doc.pages
+        .get(index)
+        .ok_or_else(|| "page out of range".to_string())
+}
+
 fn export_pdf(doc: &PagedDocument) -> Result<ExportResponse, String> {
     let options = typst_pdf::PdfOptions::default();
     let bytes =
@@ -57,22 +66,20 @@ fn export_pdf(doc: &PagedDocument) -> Result<ExportResponse, String> {
     })
 }
 
-fn export_svg(doc: &PagedDocument) -> ExportResponse {
-    // svg_merged writes all pages into a single SVG document.
-    let svg = typst_svg::svg_merged(doc, typst::layout::Abs::pt(0.0));
+fn export_svg(page: &Page) -> ExportResponse {
+    let svg = typst_svg::svg(page);
     ExportResponse {
         data: svg.into_bytes(),
         mime: "image/svg+xml",
     }
 }
 
-// Default DPI matches typst CLI's default for raster export.
+// Matches the typst CLI default for raster export.
 const DEFAULT_PNG_PPI: f32 = 144.0;
-// Typst's render pixels-per-pt unit; 72 pt = 1 inch.
+// Typst measures lengths in points; typst_render takes pixels-per-pt.
 const PT_PER_INCH: f32 = 72.0;
 
-fn export_png(doc: &PagedDocument, ppi: Option<f32>) -> Result<ExportResponse, String> {
-    let page = doc.pages.first().ok_or_else(|| "no pages".to_string())?;
+fn export_png(page: &Page, ppi: Option<f32>) -> Result<ExportResponse, String> {
     let pixels_per_pt = ppi.unwrap_or(DEFAULT_PNG_PPI) / PT_PER_INCH;
     let pixmap = typst_render::render(page, pixels_per_pt);
     let png = pixmap
@@ -114,14 +121,12 @@ pub struct RenderResponse {
 
 pub fn render(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     let args: RenderArgs = from_js(args)?;
-    let doc = require_paged(state)?;
-    let page = doc
-        .pages
-        .get(args.index)
-        .ok_or_else(|| "page out of range".to_string())?;
+    let page = page_at(require_paged(state)?, args.index)?;
+
     let pixmap = typst_render::render(page, args.zoom);
     let width = pixmap.width();
     let rgba = pixmap.data().to_vec();
+
     to_js(&RenderResponse { data: rgba, width })
 }
 
