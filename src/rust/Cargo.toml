@@ -58,3 +58,6 @@ tar = { version = "0.4", default-features = false }
 [features]
 default = ["panic-hook"]
 panic-hook = ["dep:console_error_panic_hook"]
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+parking_lot_core = { version = "0.9", features = ["nightly"] }

@@ -2,6 +2,8 @@
 
 Typst compiled to WebAssembly for the web with nice bindings for IDEs and more.
 
+Read the docs on [docs.onykia.eu](https://docs.onykia.eu/engine/).
+
 Used in [`onykia-editor`](https://github.com/mudomi/onykia-editor) and [`onykia-app`](https://github.com/mudomi/onykia-app).
 
 ## Packages
@@ -44,8 +46,6 @@ message pointing at this section. See [SharedArrayBuffer requirements](https://d
 
 - **Outline** notifications are stubbed.
 - **archive()** is stubbed.
-- **SVG export** is merged all-pages only; no per-page SVG.
-- **PNG export** via `export` is first-page only (`render` accepts an index).
 - **Font index** decoder only accepts JSON.
 - **Spellcheck** is delegated to JS; no built-in hunspell.
 - **Monaco binding** supports only edits + diagnostics - no syntax highlight,
