@@ -2,7 +2,7 @@
 # attribution block in NOTICE.
 #
 # The list of `accepted` SPDX identifiers must stay aligned with the
-# license texts reproduced in NOTICE (§A–§E). Any new license that
+# license texts reproduced in NOTICE (§A-§E). Any new license that
 # appears in the dependency graph causes `cargo about generate` to
 # fail, forcing a deliberate review before NOTICE can be regenerated.
 
@@ -24,7 +24,7 @@ accepted = [
 ]
 
 # We only ship a wasm32-unknown-unknown artifact, so restrict the
-# graph walk to that target — keeps host-only crates (e.g. windows-*)
+# graph walk to that target - keeps host-only crates (e.g. windows-*)
 # out of the report.
 targets = ["wasm32-unknown-unknown"]
 

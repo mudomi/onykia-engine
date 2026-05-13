@@ -3,7 +3,6 @@ import { type Diagnostic as CMDiagnostic, setDiagnostics } from '@codemirror/lin
 import type { Core, Diagnostic } from '@mudomi/onykia-engine';
 import { fromByteOffset } from './offsets.js';
 
-/** Push diagnostics from Core into CodeMirror's lint state. */
 export function applyDiagnostics(
   view: EditorView,
   diagnostics: Diagnostic[],
@@ -44,10 +43,6 @@ export function applyDiagnostics(
   view.dispatch(setDiagnostics(view.state, cm));
 }
 
-/**
- * Convenience: subscribe to Core's diagnostics channel and push updates into
- * `view` automatically. Returns an unsubscribe function.
- */
 export function diagnosticsSubscription(
   core: Core,
   view: EditorView,

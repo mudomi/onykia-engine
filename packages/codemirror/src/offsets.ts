@@ -1,15 +1,5 @@
-/**
- * Offset conversion between CodeMirror (UTF-16 code units) and Rust/Typst
- * (UTF-8 bytes). All Typst source positions - edits, highlights, diagnostics,
- * cursor queries - are UTF-8 byte offsets. CodeMirror and JavaScript strings
- * use UTF-16 code unit positions. For pure-ASCII text both representations are
- * identical; they diverge on any non-ASCII character.
- */
+// Offset conversion: CodeMirror uses UTF-16 code units; Typst/Rust uses UTF-8 bytes.
 
-/**
- * Convert a CodeMirror / JavaScript UTF-16 string offset to a UTF-8 byte
- * offset. Pass the text of the document at the relevant point in time.
- */
 export function toByteOffset(text: string, utf16Offset: number): number {
   // TextEncoder.encode(slice) is the simplest correct implementation: JS
   // string slicing operates in UTF-16 code units (same as CM positions), so
@@ -17,10 +7,6 @@ export function toByteOffset(text: string, utf16Offset: number): number {
   return new TextEncoder().encode(text.slice(0, utf16Offset)).length;
 }
 
-/**
- * Convert a UTF-8 byte offset from Rust/Typst back to a CodeMirror / JS
- * UTF-16 string offset.
- */
 export function fromByteOffset(text: string, byteOffset: number): number {
   let bytes = 0;
   let i = 0;
@@ -29,7 +15,7 @@ export function fromByteOffset(text: string, byteOffset: number): number {
     if (code >= 0xd800 && code <= 0xdbff) {
       const next = text.charCodeAt(i + 1);
       if (next >= 0xdc00 && next <= 0xdfff) {
-        // Surrogate pair --> U+10000–U+10FFFF --> 4 UTF-8 bytes, 2 UTF-16 units.
+        // Surrogate pair --> U+10000-U+10FFFF --> 4 UTF-8 bytes, 2 UTF-16 units.
         bytes += 4;
         i += 2;
       } else {
@@ -51,11 +37,7 @@ export function fromByteOffset(text: string, byteOffset: number): number {
   return i;
 }
 
-/**
- * Build a Uint32Array mapping each UTF-8 byte index --> UTF-16 code unit index
- * for the given text. O(n) construction, O(1) lookup per offset - use this
- * when converting many offsets against the same text (e.g. highlight tokens).
- */
+// O(n) build, O(1) lookup — use when converting many offsets against the same text.
 export function buildByteToCharMap(text: string): Uint32Array {
   // Upper bound: every byte could be its own ASCII char (1 byte per char),
   // so byteLen ≤ text.length * 4 (worst case all 4-byte sequences).

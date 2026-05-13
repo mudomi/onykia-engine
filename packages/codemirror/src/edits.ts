@@ -3,12 +3,6 @@ import { EditorView as EV } from '@codemirror/view';
 import type { Core } from '@mudomi/onykia-engine';
 import { toByteOffset } from './offsets.js';
 
-/**
- * Forwards CodeMirror document changes to Core as incremental edits.
- *
- * Must be installed once per editor. The extension translates each
- * transaction's ChangeSet into Core's `{range, replacement}[]` shape.
- */
 export function forwardEdits(core: Core, path: string) {
   return EV.updateListener.of((update: ViewUpdate) => {
     if (!update.docChanged) return;
@@ -29,7 +23,6 @@ export function forwardEdits(core: Core, path: string) {
   });
 }
 
-/** Mirror the initial editor content into Core on first install. */
 export async function primeFile(
   core: Core,
   path: string,

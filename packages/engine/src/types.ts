@@ -8,7 +8,7 @@ export interface WasmFactory {
 export interface HandlerOptions {
   /** Initial shared-memory pages (64 KB each). Default: 512 (32 MB). */
   initMemory?: number;
-  /** Maximum shared-memory pages (64 KB each). Default: 16384 (1 GB) — matches the WASM `--max-memory` link flag. */
+  /** Maximum shared-memory pages (64 KB each). Default: 16384 (1 GB) - matches the WASM `--max-memory` link flag. */
   maxMemory?: number;
   /** Reject outstanding promises when the handler is destroyed. Default: true. */
   rejectOnDestruction?: boolean;

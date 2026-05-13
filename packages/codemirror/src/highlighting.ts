@@ -15,12 +15,7 @@ import { buildByteToCharMap } from './offsets.js';
 
 const setHighlightEffect = StateEffect.define<DecorationSet>();
 
-/**
- * StateField that carries decorations across doc changes (anti-flicker).
- *
- * While new highlight data is being fetched, previously-rendered decorations
- * are mapped through the change set so they stay approximately correct.
- */
+// Anti-flicker: maps existing decorations through changes while async highlight data loads.
 const highlightField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(decos, tr) {
@@ -40,11 +35,7 @@ export interface HighlightExtensionOptions {
   style?: HighlightStyle;
 }
 
-/**
- * Creates the CM6 extensions that turn `Core.highlight()` output into
- * decorations. Must be applied per-path because Core's highlight is keyed
- * by VFS path.
- */
+// Must be applied per-path; Core.highlight() is keyed by VFS path.
 export async function highlightExtension(
   core: Core,
   path: string,

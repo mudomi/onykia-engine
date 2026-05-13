@@ -25,20 +25,11 @@ export interface CoreOptions {
     name: string,
     version: string,
   ) => Promise<Uint8Array | ArrayBuffer>;
-  /**
-   * Resolves a lazy-loaded font binary. Called the first time the compiler
-   * actually needs the bytes for a stub registered via `addFontStubs`.
-   * `key` is the opaque value the host supplied with the stub.
-   */
+  /** `key` is the opaque identifier supplied with the stub via `addFontStubs`. */
   font?: (key: string) => Promise<Uint8Array | ArrayBuffer>;
   handlerOptions?: HandlerOptions;
 }
 
-/**
- * Every call that mutates compiler state also triggers an implicit
- * recompilation inside the worker. Consumers receive results through
- * `onStatus` / `onDiagnostics` / `onPages` / `onOutline` subscriptions.
- */
 export class Core {
   private handler: Handler;
   private listeners = new Map<NotifyName, Set<(payload: unknown) => void>>();
@@ -71,8 +62,6 @@ export class Core {
 
     this.handler = new Handler(options.wasm, ask, notify, options.handlerOptions);
   }
-
-  // ─── subscriptions ─────────────────────────────────────────────────────
 
   on<K extends NotifyName>(name: K, fn: (payload: NotifyPayloads[K]) => void): () => void {
     let set = this.listeners.get(name);
@@ -108,8 +97,6 @@ export class Core {
   onPages(fn: (p: NotifyPayloads['pages']) => void) { return this.on('pages', fn); }
   onOutline(fn: (p: NotifyPayloads['outline']) => void) { return this.on('outline', fn); }
 
-  // ─── filesystem ────────────────────────────────────────────────────────
-
   create(path: string, mime: string, data: string | Uint8Array): Promise<void> {
     const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
     return this.dispatchStateful('create', { path, mime, data: bytes });
@@ -131,8 +118,6 @@ export class Core {
     return this.dispatchStateful('clear', {});
   }
 
-  // ─── compiler config ───────────────────────────────────────────────────
-
   setTarget(target: ExportTarget): Promise<void> {
     return this.dispatchStateful('setTarget', { target });
   }
@@ -146,16 +131,11 @@ export class Core {
     return this.dispatchStateful('addFont', { data });
   }
 
-  /** Register multiple font files in one round-trip, rebuilding the font book once. */
   addFonts(fonts: Uint8Array[]): Promise<void> {
     return this.dispatchStateful('addFonts', { fonts });
   }
 
-  /**
-   * Register fonts by name without supplying their binaries. Stubs appear in
-   * autocomplete and the font book immediately; the binary is fetched via the
-   * `font` ask handler the first time the compiler resolves the slot.
-   */
+  // Stubs visible in autocomplete immediately; binary fetched lazily via CoreOptions.font.
   addFontStubs(stubs: FontStub[]): Promise<void> {
     return this.dispatchStateful('addFontStubs', { stubs });
   }
@@ -167,8 +147,6 @@ export class Core {
   configureSpellCheck(enabled: boolean, personalDictionary: string[] = []): Promise<void> {
     return this.dispatchStateful('configureSpellCheck', { enabled, personalDictionary });
   }
-
-  // ─── IDE features ──────────────────────────────────────────────────────
 
   tags(): Promise<TagsResult> {
     return this.handler.dispatch('tags', {});
@@ -208,8 +186,6 @@ export class Core {
     return this.handler.dispatch('jumpFromClick', args);
   }
 
-  // ─── export ────────────────────────────────────────────────────────────
-
   export(args: Record<string, unknown> & { format: string }): Promise<ExportResult> {
     return this.handler.dispatch('export', args);
   }
@@ -222,13 +198,10 @@ export class Core {
     return this.handler.dispatch('archive', { format });
   }
 
-  // ─── lifecycle ─────────────────────────────────────────────────────────
-
   destroy(): void {
     this.handler.destroy();
   }
 
-  // Recreate the worker and re-subscribe channels that still have listeners.
   revive(): void {
     this.handler.revive();
     this.subscribedChannels.clear();

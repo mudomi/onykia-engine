@@ -50,7 +50,7 @@ mv "$OUT"/onykia_engine_bg.wasm.d.ts "$OUT"/onykia_engine.wasm.d.ts
 sed -i "s|onykia_engine_bg\.wasm|onykia_engine.wasm|g" "$OUT"/onykia_engine.js
 
 # wasm-bindgen-rayon's workerHelpers.js dynamically imports the parent entry
-# as `'../../..'` — bundler-style directory resolution. Native browser ESM
+# as `'../../..'` - bundler-style directory resolution. Native browser ESM
 # (and Vite's static asset path) won't resolve that, so the rayon worker pool
 # fails to boot. Rewrite to the actual entry file.
 find "$OUT/snippets" -name workerHelpers.js -exec \

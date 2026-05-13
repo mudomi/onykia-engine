@@ -8,10 +8,6 @@ export interface RenderToCanvasOptions {
   canvas: HTMLCanvasElement;
 }
 
-/**
- * Render a page through {@link Core.render} and paint the resulting RGBA
- * buffer onto a `<canvas>`. Resizes the canvas to match the rendered pixmap.
- */
 export async function renderToCanvas(core: Core, options: RenderToCanvasOptions): Promise<void> {
   const result = await core.render(options.index, options.zoom);
   paint(options.canvas, result);

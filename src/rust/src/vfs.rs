@@ -11,7 +11,6 @@ use typst::foundations::Bytes;
 use typst::syntax::package::PackageSpec;
 use typst::syntax::{FileId, Source, VirtualPath};
 
-/// A single project file tracked by the VFS.
 pub struct File {
     pub mime: String,
     pub bytes: Bytes,
@@ -38,8 +37,7 @@ impl File {
     }
 }
 
-/// A file extracted from a package tarball. Mime is inferred from the path
-/// suffix because tar entries don't carry one.
+// Mime inferred from path extension; tar entries don't carry one.
 pub struct PackageEntry {
     pub bytes: Bytes,
     source: Option<Source>,
@@ -131,7 +129,6 @@ impl Vfs {
         self.packages.get(&id)
     }
 
-    /// Mount one entry of a package tarball under its interned `FileId`.
     pub fn install_package_file(&mut self, spec: &PackageSpec, vpath: &str, bytes: Vec<u8>) {
         let id = FileId::new(Some(spec.clone()), VirtualPath::new(vpath));
         self.packages

@@ -1,5 +1,5 @@
 ==========================================================================
-onykia-engine — Third-Party License Texts
+onykia-engine - Third-Party License Texts
 ==========================================================================
 
 This file collects every license text required by software bundled into
@@ -17,7 +17,7 @@ typst-assets NOTICE (bundled fonts), and scripts/license-appendix.txt
 (Typst-internal upstream attributions).
 
 ==========================================================================
-Section 1 — Rust crates statically linked into onykia_engine.wasm
+Section 1 - Rust crates statically linked into onykia_engine.wasm
 ==========================================================================
 
 Each subsection lists every crate using the named license, with the
@@ -1157,7 +1157,7 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 
 ==========================================================================
-Section 2 — Bundled fonts (typst-assets)
+Section 2 - Bundled fonts (typst-assets)
 ==========================================================================
 
 onykia_engine.wasm embeds the default font set from typst-assets via
@@ -2058,7 +2058,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ================================================================================
 
 ==========================================================================
-Section 3 — Typst-internal upstream attributions
+Section 3 - Typst-internal upstream attributions
 ==========================================================================
 
 These license texts apply to portions of code or content vendored
@@ -2089,7 +2089,7 @@ entirety and only with respect to the Combined Software.
 
 
 ==========================================================================
-LaTeX Project Public License (LPPL) — summary
+LaTeX Project Public License (LPPL) - summary
 ==========================================================================
 
 Applies to Babel- and Cleveref-derived translation strings inside the
