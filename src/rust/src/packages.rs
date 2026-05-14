@@ -8,7 +8,6 @@ use typst::syntax::package::{PackageSpec, PackageVersion};
 
 use crate::vfs::Vfs;
 
-/// Decompress a `.tar.gz` and mount every regular-file entry into the VFS
 pub fn install_tarball(vfs: &mut Vfs, spec: &PackageSpec, bytes: &[u8]) -> Result<(), String> {
     let gz = flate2::read::GzDecoder::new(bytes);
     let mut archive = tar::Archive::new(gz);
@@ -39,7 +38,6 @@ pub fn install_tarball(vfs: &mut Vfs, spec: &PackageSpec, bytes: &[u8]) -> Resul
     Ok(())
 }
 
-/// Parse index.json into a flat list of `(spec, description)` pairs.
 pub fn parse_index(namespace: &EcoString, bytes: &[u8]) -> Vec<(PackageSpec, Option<EcoString>)> {
     if bytes.is_empty() {
         return Vec::new();
@@ -73,7 +71,6 @@ struct IndexEntry {
     description: Option<EcoString>,
 }
 
-/// Convert a tar entry path into a rooted virtual path.
 fn vpath_for(path: &std::path::Path) -> Option<String> {
     let s = path.to_str()?;
     if s.is_empty() || s.starts_with('/') {

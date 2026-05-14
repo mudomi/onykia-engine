@@ -13,7 +13,6 @@ use crate::state::{State, Target};
 
 pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
     let result: Result<JsValue, String> = match name {
-        // ─── Filesystem ──────────────────────────────────────────────────
         "create" => handle_create(state, args).map(|_| JsValue::UNDEFINED),
         "edit" => handle_edit(state, args).map(|_| JsValue::UNDEFINED),
         "move" => handle_move(state, args).map(|_| JsValue::UNDEFINED),
@@ -25,7 +24,6 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
             Ok(JsValue::UNDEFINED)
         }
 
-        // ─── Compiler config ─────────────────────────────────────────────
         "setTarget" => handle_set_target(state, args).map(|_| JsValue::UNDEFINED),
         "setMain" => handle_set_main(state, args).map(|_| JsValue::UNDEFINED),
         "addFont" => handle_add_font(state, args).map(|_| JsValue::UNDEFINED),
@@ -34,11 +32,9 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         "setRemotePackages" => handle_set_packages(state, args).map(|_| JsValue::UNDEFINED),
         "configureSpellCheck" => Ok(JsValue::UNDEFINED), // Spellcheck delegated to JS.
 
-        // ─── Subscriptions ───────────────────────────────────────────────
         "subscribe" => handle_subscribe(state, args).map(|_| JsValue::UNDEFINED),
         "unsubscribe" => handle_unsubscribe(state, args).map(|_| JsValue::UNDEFINED),
 
-        // ─── IDE ─────────────────────────────────────────────────────────
         "syntaxTree" => ide::syntax_tree(state, args),
         "tags" => ide::tags(state),
         "highlight" => ide::highlight(state, args),
@@ -49,7 +45,6 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         "jumpFromClick" => ide::jump_from_click(state, args),
         "references" => Ok(JsValue::NULL),
 
-        // ─── Export ──────────────────────────────────────────────────────
         "export" => export::export(state, args),
         "render" => export::render(state, args),
         "archive" => export::archive(state, args),
@@ -58,7 +53,6 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         _ => Err(format!("unknown request: {name}")),
     };
 
-    // Trigger recompilation on any state-changing request.
     if is_compile_trigger(name) && result.is_ok() {
         compile::run(state);
     }
@@ -85,8 +79,6 @@ fn is_compile_trigger(name: &str) -> bool {
             | "setRemotePackages"
     )
 }
-
-// ─── Typed handlers ─────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 struct CreateArgs {

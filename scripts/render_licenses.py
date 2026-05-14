@@ -3,14 +3,14 @@
 
 The output has three sections:
 
-    1. Rust crates statically linked into onykia_engine.wasm — one block
+    1. Rust crates statically linked into onykia_engine.wasm - one block
        per SPDX license id, listing every crate that uses it (with each
        crate's Cargo.toml `authors` preserved as a copyright line) and
        the canonical license body once.
-    2. Bundled fonts — the upstream typst-assets NOTICE reproduced
+    2. Bundled fonts - the upstream typst-assets NOTICE reproduced
        verbatim from the resolved crate source. Tracks the pinned
        version automatically.
-    3. Typst-internal upstream attributions — the static fragment in
+    3. Typst-internal upstream attributions - the static fragment in
        scripts/license-appendix.txt (LLVM Exception, LPPL summary,
        NCSA). NOTICE describes which file each section applies to.
 
@@ -36,7 +36,7 @@ RUST_MANIFEST = REPO_ROOT / "src" / "rust" / "Cargo.toml"
 
 HEADER = """\
 ==========================================================================
-onykia-engine — Third-Party License Texts
+onykia-engine - Third-Party License Texts
 ==========================================================================
 
 This file collects every license text required by software bundled into
@@ -148,7 +148,7 @@ def render_section_crates(about: dict[str, Any]) -> str:
 
     parts: list[str] = []
     parts.append(DOUBLE_RULE)
-    parts.append("Section 1 — Rust crates statically linked into onykia_engine.wasm")
+    parts.append("Section 1 - Rust crates statically linked into onykia_engine.wasm")
     parts.append(DOUBLE_RULE)
     parts.append("")
     parts.append(
@@ -183,7 +183,7 @@ def render_section_fonts(metadata: dict[str, Any]) -> str:
 
     parts: list[str] = []
     parts.append(DOUBLE_RULE)
-    parts.append("Section 2 — Bundled fonts (typst-assets)")
+    parts.append("Section 2 - Bundled fonts (typst-assets)")
     parts.append(DOUBLE_RULE)
     parts.append("")
     parts.append(
@@ -203,7 +203,7 @@ def render_section_appendix() -> str:
 
     parts: list[str] = []
     parts.append(DOUBLE_RULE)
-    parts.append("Section 3 — Typst-internal upstream attributions")
+    parts.append("Section 3 - Typst-internal upstream attributions")
     parts.append(DOUBLE_RULE)
     parts.append("")
     parts.append(

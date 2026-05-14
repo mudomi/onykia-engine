@@ -17,9 +17,7 @@ thread_local! {
     static OUTSTANDING: RefCell<HashMap<u32, Continuation>> = RefCell::new(HashMap::new());
 }
 
-/// Schedule `on_done` to run when the named resource arrives. Errors out
-/// synchronously when `args` can't be encoded for JS — caller must clean up
-/// any in-flight bookkeeping it staged before this call.
+// Errors synchronously if args can't be serialized; caller must roll back in-flight state.
 pub fn request<A: Serialize>(
     resource: &str,
     args: &A,

@@ -34,10 +34,9 @@ pub fn run(state: &mut State) {
     let result = typst::compile::<PagedDocument>(&state.world);
     let warnings = result.warnings;
 
-    // Any package misses recorded during this pass become fetch requests.
     if dispatch_pending_fetches(state) {
         // We've issued (or are still waiting on) fetches; results from the
-        // current pass are stale — defer emit until the retry compile runs.
+        // current pass are stale - defer emit until the retry compile runs.
         return;
     }
 
@@ -74,7 +73,7 @@ fn dispatch_pending_fetches(state: &mut State) -> bool {
             )
         };
         if dispatched.is_err() {
-            // Couldn't even queue the request — count as a failed attempt so
+            // Couldn't even queue the request - count as a failed attempt so
             // we don't spin forever on a broken host.
             state.in_flight_packages.remove(&spec);
             state.world.mark_package_failed(spec);
@@ -246,8 +245,7 @@ fn pages_notif(state: &State) -> PagesNotification {
 }
 
 fn outline_notif(state: &State) -> OutlineNotification {
-    // Walking Typst's heading structure requires introspecting the frame tree
-    // for the first paged-output pass; we ship a stub until that pass lands.
+    // TODO: implement outline extraction.
     let _ = state;
     OutlineNotification {
         entries: Vec::<OutlineEntry>::new(),

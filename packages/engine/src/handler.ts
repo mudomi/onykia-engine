@@ -31,12 +31,6 @@ interface Pending {
   reject: (error: Error) => void;
 }
 
-/**
- * Owns one worker that hosts the Typst `State` and the rayon thread pool
- * (spawned internally by `wasm-bindgen-rayon`'s `initThreadPool`). Replies
- * to `fetch` messages are posted back to the same worker — Rust-side ask
- * delivery is callback-based, so the driver is never parked.
- */
 export class Handler {
   private lastId = 0;
   private inflight = new Map<number, Pending>();

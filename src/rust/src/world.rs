@@ -25,13 +25,9 @@ pub struct OnykiaWorld {
     pub vfs: Vfs,
     pub main_path: Option<String>,
 
-    /// Raw bytes of `index.json` per namespace
     package_indices: HashMap<EcoString, Vec<u8>>,
-    /// Flat catalog
     indexed_packages: Vec<(PackageSpec, Option<EcoString>)>,
-    /// Packages whose tarball has been unpacked into `vfs`.
     installed_packages: HashSet<PackageSpec>,
-    /// Failed fetch attempts per package.
     failed_packages: HashMap<PackageSpec, u8>,
     pending_packages: Mutex<HashSet<PackageSpec>>,
 
@@ -41,11 +37,9 @@ pub struct OnykiaWorld {
     font_slots: Vec<Option<Font>>,
     /// Parallel to `font_slots`, used to rebuild the `FontBook` cheaply.
     font_infos: Vec<FontInfo>,
-    /// Slot index → opaque key the JS host uses to look up the binary.
+    /// Slot index -> opaque key the JS host uses to look up the binary.
     font_stubs: HashMap<usize, EcoString>,
-    /// Slots whose binary was requested during the last compile but not yet loaded.
     pending_fonts: Mutex<HashSet<usize>>,
-    /// Failed fetch attempts per stub slot.
     failed_fonts: HashMap<usize, u8>,
 }
 
@@ -83,16 +77,12 @@ impl OnykiaWorld {
         world
     }
 
-    /// Register fonts whose bytes live in static memory (typically embedded
-    /// via `include_bytes!`). Avoids the heap copy `add_font` performs.
+    // Avoids the heap copy that add_font performs.
     fn add_static_fonts(&mut self, files: impl IntoIterator<Item = &'static [u8]>) {
         self.add_font_files(files.into_iter().map(Bytes::new).collect());
     }
 
-    /// Parse all faces of every supplied font file in parallel and commit
-    /// them to `font_slots` + `FontBook` in one rebuild. Each `Font::new`
-    /// is a self-contained sfnt parse, so this scales cleanly across the
-    /// rayon pool initialised by `wasm_bindgen_rayon::init_thread_pool`.
+    // Parses all faces in parallel; commits to font_slots and FontBook in one rebuild.
     fn add_font_files(&mut self, files: Vec<Bytes>) {
         let parsed: Vec<Font> = files.into_par_iter().flat_map(parse_font_file).collect();
         for font in parsed {
@@ -118,9 +108,7 @@ impl OnykiaWorld {
         self.add_font_files(files.into_iter().map(Bytes::new).collect());
     }
 
-    /// Register fonts by name. Each stub appears in autocomplete and the
-    /// font book immediately, but its binary is fetched lazily via the
-    /// `font` ask channel the first time the compiler asks for the slot.
+    // Stubs appear in autocomplete immediately; bytes fetched lazily.
     pub fn add_font_stubs(&mut self, stubs: Vec<FontStub>) {
         for stub in stubs {
             let info = FontInfo {
@@ -141,8 +129,6 @@ impl OnykiaWorld {
         self.rebuild_book();
     }
 
-    /// Drain stub indices recorded by `World::font` during the last compile
-    /// pass. Failed slots are retried up to `MAX_FONT_FETCH_RETRIES` times.
     pub fn take_pending_fonts(&mut self) -> Vec<(usize, EcoString)> {
         let drained: Vec<usize> = self
             .pending_fonts
@@ -183,9 +169,7 @@ impl OnykiaWorld {
             .is_none_or(|attempts| *attempts < Self::MAX_FONT_FETCH_RETRIES)
     }
 
-    /// Replace the catalog for a namespace with the raw `index.json` bytes
-    /// and rebuild the flat catalog. Empty bytes (`Uint8Array(0)`) clear the
-    /// namespace; JS sends that for forbidden private scopes.
+    // Empty bytes clear the namespace; JS sends that for forbidden private scopes.
     pub fn set_package_index(&mut self, namespace: EcoString, data: Vec<u8>) {
         if data.is_empty() {
             self.package_indices.remove(&namespace);
@@ -203,9 +187,6 @@ impl OnykiaWorld {
         self.indexed_packages = all;
     }
 
-    /// Drain specs that World::file recorded as unresolved during the last
-    /// compile pass. Failed specs are retried up to
-    /// `MAX_PACKAGE_FETCH_RETRIES` times.
     pub fn take_pending_packages(&mut self) -> Vec<PackageSpec> {
         let drained: Vec<PackageSpec> = self
             .pending_packages
@@ -234,7 +215,6 @@ impl OnykiaWorld {
         Some(FileId::new(None, VirtualPath::new(path)))
     }
 
-    /// Resolve a file/source FileId that carries a package spec.
     fn package_status(&self, id: FileId, spec: &PackageSpec) -> PackageStatus {
         if !self.can_retry_package(spec) {
             return PackageStatus::FetchFailed;
@@ -258,8 +238,6 @@ impl OnykiaWorld {
     }
 }
 
-/// Lazy-font registration record. Only `family` and `key` are required;
-/// the variant components default to (Normal, Regular, Normal) when omitted.
 pub struct FontStub {
     pub family: String,
     pub key: EcoString,

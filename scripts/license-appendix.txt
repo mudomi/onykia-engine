@@ -21,7 +21,7 @@ entirety and only with respect to the Combined Software.
 
 
 ==========================================================================
-LaTeX Project Public License (LPPL) — summary
+LaTeX Project Public License (LPPL) - summary
 ==========================================================================
 
 Applies to Babel- and Cleveref-derived translation strings inside the

@@ -26,7 +26,7 @@ export async function createEngine(): Promise<Core> {
   });
 
   // Forward the public preview index so autocomplete and version-resolution
-  // see what packages exist. Failure is non-fatal — imports still resolve via
+  // see what packages exist. Failure is non-fatal - imports still resolve via
   // the per-tarball ask path; only the IDE catalog goes dark.
   void loadPreviewIndex(core).catch(err =>
     console.warn('[onykia] preview index fetch failed:', err),

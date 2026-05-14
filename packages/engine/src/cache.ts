@@ -1,10 +1,3 @@
-/**
- * IndexedDB-backed byte cache for assets fetched through the `ask()`
- * channel - typically font files and Typst packages. The cache is best-effort:
- * read/write failures (private-mode Safari, quota, etc.) are logged and the
- * underlying loader still runs, so caching never blocks a compile.
- */
-
 const DEFAULT_DB_NAME = 'onykia-cache';
 const DEFAULT_STORE_NAME = 'bytes';
 
@@ -45,10 +38,6 @@ export function indexedDbCache(
   };
 }
 
-/**
- * Wrap a loader so that successful results are cached by `keyOf(args)`.
- * Cache hits skip the loader entirely. Loader errors propagate unchanged.
- */
 export function withCache<A extends unknown[]>(
   loader: (...args: A) => Promise<Uint8Array | ArrayBuffer>,
   cache: BytesCache,

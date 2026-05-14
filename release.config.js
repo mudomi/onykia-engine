@@ -9,9 +9,9 @@ export default {
       {
         prepareCmd: 'node scripts/sync-version.mjs ${nextRelease.version}',
         publishCmd: [
-          '"$SYSTEM_NPM" publish --workspace ./packages/engine     --access public --provenance --loglevel verbose',
-          '"$SYSTEM_NPM" publish --workspace ./packages/codemirror --access public --provenance --loglevel verbose',
-          '"$SYSTEM_NPM" publish --workspace ./packages/monaco     --access public --provenance --loglevel verbose',
+          '"$SYSTEM_NPM" publish --workspace ./packages/engine     --access public --provenance --tag latest --loglevel verbose',
+          '"$SYSTEM_NPM" publish --workspace ./packages/codemirror --access public --provenance --tag latest --loglevel verbose',
+          '"$SYSTEM_NPM" publish --workspace ./packages/monaco     --access public --provenance --tag latest --loglevel verbose',
         ].join(' && '),
       },
     ],

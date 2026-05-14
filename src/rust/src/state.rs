@@ -11,7 +11,6 @@ use wasm_bindgen::prelude::*;
 
 use crate::world::OnykiaWorld;
 
-/// Export target - which backend runs after a successful compile.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Target {
     #[default]

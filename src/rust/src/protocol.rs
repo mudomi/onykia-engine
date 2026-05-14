@@ -21,7 +21,7 @@ extern "C" {
     pub fn post_fetch(id: u32, resource: &str, args: JsValue);
 }
 
-/// JS plain object, never Map — the worker shim accesses fields by name.
+/// JS plain object, never Map - the worker shim accesses fields by name.
 pub fn to_js<T: Serialize>(value: &T) -> Result<JsValue, String> {
     let s = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
     value.serialize(&s).map_err(|e| e.to_string())

@@ -7,14 +7,11 @@ use wasm_bindgen::prelude::*;
 use crate::protocol::{from_js, to_js};
 use crate::state::State;
 
-// ─── tags() ───────────────────────────────────────────────────────────────
-
 #[derive(Serialize)]
 pub struct TagsResponse {
     pub names: Vec<&'static str>,
 }
 
-/// Static list of token type names, in the order returned by `highlight()`.
 pub const TAG_NAMES: &[&str] = &[
     "typ-comment",
     "typ-punct",
@@ -44,8 +41,6 @@ pub fn tags(_state: &mut State) -> Result<JsValue, String> {
         names: TAG_NAMES.to_vec(),
     })
 }
-
-// ─── highlight() ──────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 pub struct HighlightArgs {
@@ -161,8 +156,6 @@ fn map_kind(kind: SyntaxKind) -> Option<u32> {
     Some(idx)
 }
 
-// ─── syntaxTree() ─────────────────────────────────────────────────────────
-
 #[derive(Deserialize)]
 pub struct SyntaxTreeArgs {
     pub path: String,
@@ -219,8 +212,6 @@ fn cst_node(node: &SyntaxNode, src: &str, offset: usize) -> CstNode {
         children,
     }
 }
-
-// ─── autocomplete() / tooltip() / definition() ────────────────────────────
 
 #[derive(Deserialize)]
 pub struct AutocompleteArgs {
@@ -295,8 +286,6 @@ fn completion_kind_str(kind: &typst_ide::CompletionKind) -> &'static str {
     }
 }
 
-// ─── tooltip() ────────────────────────────────────────────────────────────
-
 #[derive(Deserialize)]
 pub struct TooltipArgs {
     pub path: String,
@@ -365,8 +354,6 @@ fn escape_html(s: &str) -> String {
     out
 }
 
-// ─── definition() ────────────────────────────────────────────────────────
-
 #[derive(Deserialize)]
 pub struct DefinitionArgs {
     pub path: String,
@@ -424,8 +411,6 @@ pub fn definition(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     Ok(JsValue::NULL)
 }
 
-// ─── jumpFromCursor ──────────────────────────────────────────────────────
-
 #[derive(Deserialize)]
 pub struct JumpCursorArgs {
     pub path: String,
@@ -461,8 +446,6 @@ pub fn jump_from_cursor(state: &mut State, args: JsValue) -> Result<JsValue, Str
         .collect();
     to_js(&out)
 }
-
-// ─── jumpFromClick ───────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
 pub struct JumpClickArgs {

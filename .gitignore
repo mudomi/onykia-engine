@@ -15,7 +15,7 @@ example/public/assets/*
 *.log
 npm-debug.log*
 
-# Per-package license and readme files — copied from repo root at publish time
+# Per-package license and readme files - copied from repo root at publish time
 packages/*/LICENSE
 packages/*/NOTICE
 packages/*/THIRD-PARTY-LICENSES.txt

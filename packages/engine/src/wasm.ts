@@ -1,8 +1,8 @@
 import type { WasmFactory } from './types.js';
 
-/** Initial shared-memory pages (64 KB each). 512 → 32 MB. */
+/** Initial shared-memory pages (64 KB each). 512 -> 32 MB. */
 export const DEFAULT_INIT_MEMORY_PAGES = 512;
-/** Maximum shared-memory pages. 16384 → 1 GB. Matches `--max-memory` in `scripts/build-wasm.sh`. */
+/** Maximum shared-memory pages. 16384 -> 1 GB. Matches `--max-memory` in `scripts/build-wasm.sh`. */
 export const DEFAULT_MAX_MEMORY_PAGES = 16_384;
 
 const COI_ERROR =
@@ -16,11 +16,6 @@ export interface WasmFactoryOptions {
   workerUrl?: string;
 }
 
-/**
- * Build a {@link WasmFactory} pointing at the threaded WASM bundle. Throws
- * synchronously when the host page is not cross-origin isolated — the engine
- * has no single-threaded fallback.
- */
 export function createWasmFactory(opts: WasmFactoryOptions = {}): WasmFactory {
   assertCrossOriginIsolated();
   const wasmUrl = opts.wasmUrl ?? new URL('./wasm/onykia_engine.wasm', import.meta.url).href;
@@ -31,7 +26,6 @@ export function createWasmFactory(opts: WasmFactoryOptions = {}): WasmFactory {
   };
 }
 
-/** Throws with a header-setup hint when `crossOriginIsolated` or `SharedArrayBuffer` are missing. */
 export function assertCrossOriginIsolated(): void {
   const ok =
     typeof self !== 'undefined' &&
