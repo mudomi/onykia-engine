@@ -1,6 +1,6 @@
-//! Outbound bridge calls + serde ↔ JsValue helpers.
+//! Outbound bridge calls + serde <-> JsValue helpers.
 //!
-//! Wire tags (`result`, `signal`, `fetch`, …) are produced inside the JS
+//! Wire tags (`result`, `signal`, `fetch`, ...) are produced inside the JS
 //! shim; Rust only supplies the payload fields.
 
 use serde::{Deserialize, Serialize};

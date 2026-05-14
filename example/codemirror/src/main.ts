@@ -75,7 +75,7 @@ new ResizeObserver(() => {
 await core.setMain(PATH);
 await core.setTarget('svg');
 
-// ─── preview ──────────────────────────────────────────────────────────────
+//  preview 
 
 async function refreshPreview(): Promise<void> {
   const format = previewSelect.value as PreviewFormat;
@@ -109,7 +109,7 @@ async function renderHtmlPreview(): Promise<void> {
   previewEl.replaceChildren(iframe);
 }
 
-// ─── export ───────────────────────────────────────────────────────────────
+//  export 
 
 function syncExportControls(): void {
   const format = exportFormatSelect.value as ExportFormat;
@@ -160,7 +160,7 @@ function triggerDownload(data: Uint8Array, mime: string, filename: string): void
   URL.revokeObjectURL(url);
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────
+//  helpers 
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);

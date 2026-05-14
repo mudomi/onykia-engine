@@ -123,7 +123,7 @@ export type JumpResult =
   | { kind: 'url'; url: string };
 
 export interface HighlightResult {
-  /** Flat [start, end, tagIndex, …] triples aligned with `tags().names`. */
+  /** Flat [start, end, tagIndex, ...] triples aligned with `tags().names`. */
   data: Uint32Array;
 }
 
