@@ -1,6 +1,6 @@
 {
   "name": "@mudomi/onykia-codemirror",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "type": "module",
   "description": "CodeMirror 6 bindings for @mudomi/onykia-engine.",
   "repository": {
