@@ -42,7 +42,6 @@ pub fn tags(_state: &mut State) -> Result<JsValue, String> {
     })
 }
 
-
 #[derive(Deserialize)]
 pub struct HighlightArgs {
     pub path: String,
@@ -157,7 +156,6 @@ fn map_kind(kind: SyntaxKind) -> Option<u32> {
     Some(idx)
 }
 
-
 #[derive(Deserialize)]
 pub struct SyntaxTreeArgs {
     pub path: String,
@@ -214,7 +212,6 @@ fn cst_node(node: &SyntaxNode, src: &str, offset: usize) -> CstNode {
         children,
     }
 }
-
 
 #[derive(Deserialize)]
 pub struct AutocompleteArgs {
@@ -289,7 +286,6 @@ fn completion_kind_str(kind: &typst_ide::CompletionKind) -> &'static str {
     }
 }
 
-
 #[derive(Deserialize)]
 pub struct TooltipArgs {
     pub path: String,
@@ -358,7 +354,6 @@ fn escape_html(s: &str) -> String {
     out
 }
 
-
 #[derive(Deserialize)]
 pub struct DefinitionArgs {
     pub path: String,
@@ -416,7 +411,6 @@ pub fn definition(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     Ok(JsValue::NULL)
 }
 
-
 #[derive(Deserialize)]
 pub struct JumpCursorArgs {
     pub path: String,
@@ -452,7 +446,6 @@ pub fn jump_from_cursor(state: &mut State, args: JsValue) -> Result<JsValue, Str
         .collect();
     to_js(&out)
 }
-
 
 #[derive(Deserialize)]
 pub struct JumpClickArgs {
