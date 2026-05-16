@@ -37,10 +37,10 @@ export function fromByteOffset(text: string, byteOffset: number): number {
   return i;
 }
 
-// O(n) build, O(1) lookup — use when converting many offsets against the same text.
+// O(n) build, O(1) lookup - use when converting many offsets against the same text.
 export function buildByteToCharMap(text: string): Uint32Array {
   // Upper bound: every byte could be its own ASCII char (1 byte per char),
-  // so byteLen ≤ text.length * 4 (worst case all 4-byte sequences).
+  // so byteLen <= text.length * 4 (worst case all 4-byte sequences).
   // We don't know byteLen up front, so encode once to get it.
   const utf8 = new TextEncoder().encode(text);
   const map = new Uint32Array(utf8.length + 1);

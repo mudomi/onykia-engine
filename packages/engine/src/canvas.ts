@@ -40,7 +40,7 @@ export async function renderToCanvas(
       const result = await core.render(index, logicalZoom * dpr);
       paint(canvas, result);
 
-      // The pixmap is `dpr`× the CSS size; shrink the element so it renders
+      // The pixmap is `dpr`x the CSS size; shrink the element so it renders
       // at logical zoom while keeping the extra pixels for sharpness.
       canvas.style.width = `${result.width / dpr}px`;
       canvas.style.height = `${canvas.height / dpr}px`;
@@ -74,7 +74,7 @@ function defaultDpr(): number {
   return typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
 }
 
-/** `clientWidth` minus horizontal padding — the actual room a child laid out at 100% width gets. */
+/** `clientWidth` minus horizontal padding - the actual room a child laid out at 100% width gets. */
 function contentWidth(el: HTMLElement): number {
   const style = getComputedStyle(el);
   const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);

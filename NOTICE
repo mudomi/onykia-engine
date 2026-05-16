@@ -42,12 +42,12 @@ Typst crates at version 0.14:
    typst-html, typst-ide, typst-library, typst-pdf, typst-render,
    typst-svg, typst-syntax, typst-utils.
 
-Subsections 1.1 - 1.4 reproduce Typst's own NOTICE attributions,
-preserved per Apache 2.0 §4(d). They cite components Typst itself
-incorporates and which are, by extension, present in onykia_core.
-The corresponding license bodies (MIT, BSD 3-Clause, Apache 2.0 with
-LLVM Exception, NCSA, LPPL summary) are reproduced in
-THIRD-PARTY-LICENSES.txt §1 and §3.
+Subsections 1.1 - 1.5 reproduce required upstream NOTICE attributions
+from Typst and Typst-linked crates, preserved per Apache 2.0 §4(d).
+They cite components that are present in onykia_engine.wasm. License
+bodies for the referenced SPDX licenses are reproduced in
+THIRD-PARTY-LICENSES.txt; the Creative Commons BY-SA 3.0 notice below
+is carried with its canonical URL as in upstream.
 
 --------------------------------------------------------------------------
 1.1  Components inside Typst under the MIT License
@@ -112,6 +112,33 @@ and the LLVM contributors.
 
 Distributed under the Apache 2.0 License with LLVM Exception. The
 legacy LLVM/NCSA license is reproduced for completeness.
+
+--------------------------------------------------------------------------
+1.5  Additional Typst-linked crate NOTICE attributions
+--------------------------------------------------------------------------
+
+The following transitive crates linked into onykia_engine.wasm ship an
+upstream NOTICE file:
+
+* pixglyph
+    Apache 2.0 attribution applies to rasterization code in `Canvas`
+    adapted from font-rs (Copyright 2015 Google Inc.) and cubic-to-
+    quadratic bezier conversion in `Canvas::cubic` adapted from kurbo
+    (Copyright 2018 The kurbo Authors).
+
+* subsetter
+    MIT attribution applies to code adapted from ttf-parser (Copyright
+    (c) 2018 Yevhenii Reizner) and fonttools (Copyright (c) 2017 Just
+    van Rossum).
+
+* hayagriva
+    The Creative Commons BY-SA 3.0 DEED attribution from hayagriva's
+    upstream NOTICE applies to CSL styles/locales bundled in
+    `archive/` (https://creativecommons.org/licenses/by-sa/3.0/).
+
+* citationberg
+    Its upstream NOTICE covers CSL test assets under `tests/*` only.
+    Those test assets are not redistributed as part of onykia-engine.
 
 
 ==========================================================================
