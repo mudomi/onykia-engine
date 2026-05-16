@@ -104,7 +104,7 @@ fn export_html(state: &State) -> Result<ExportResponse, String> {
     })
 }
 
-//  render() 
+//  render()
 
 #[derive(Deserialize)]
 pub struct RenderArgs {
@@ -130,7 +130,7 @@ pub fn render(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     to_js(&RenderResponse { data: rgba, width })
 }
 
-//  archive() 
+//  archive()
 
 pub fn archive(_state: &mut State, _args: JsValue) -> Result<JsValue, String> {
     Err("archive not implemented".into())
