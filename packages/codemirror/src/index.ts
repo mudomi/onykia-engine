@@ -16,19 +16,15 @@ export { defaultTypstHighlightStyle, typstTags, nameToTag } from './tags.js';
 
 import type { Core } from '@mudomi/onykia-engine';
 import type { Extension } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
 
 import { autocompleteExtension } from './autocomplete.js';
 import { definitionExtension, type DefinitionHandlers } from './definition.js';
-import { diagnosticsSubscription } from './diagnostics.js';
 import { forwardEdits } from './edits.js';
 import { highlightExtension, type HighlightExtensionOptions } from './highlighting.js';
 import { dollarExtension } from './math.js';
 import { tooltipExtension } from './tooltip.js';
 
 export interface TypstExtensionsOptions {
-  /** Subscribe to Core.onDiagnostics and push them into the view. Default: true. */
-  wireDiagnostics?: boolean;
   /** Forward editor document changes to Core.edit(). Default: true. */
   forwardEdits?: boolean;
   /** Enable hover tooltips. Default: true. */
@@ -46,19 +42,16 @@ export interface TypstExtensionsOptions {
 /**
  * Assemble the full set of Typst-aware extensions for a given file path.
  *
- * `view` is only needed when `wireDiagnostics` is true (the subscription
- * needs to know which view to push lint state into). Returns both the
- * extensions (to include in your `EditorState.create({ extensions })`) and
- * a cleanup function that tears down the diagnostics subscription.
+ * Diagnostics are not wired here: subscribe directly with
+ * `diagnosticsSubscription(core, view, path)` (or call `applyDiagnostics`
+ * yourself) so the editor owns that side effect explicitly.
  */
 export async function typstExtensions(
   core: Core,
   path: string,
-  view: EditorView | null = null,
   options: TypstExtensionsOptions = {},
-): Promise<{ extensions: Extension[]; dispose: () => void }> {
+): Promise<{ extensions: Extension[] }> {
   const extensions: Extension[] = [];
-  const disposers: (() => void)[] = [];
   if (options.forwardEdits !== false) extensions.push(forwardEdits(core, path));
 
   if (options.highlight !== false) {
@@ -74,12 +67,5 @@ export async function typstExtensions(
   }
   if (options.dollarAutoPair !== false) extensions.push(dollarExtension());
 
-  if (options.wireDiagnostics !== false && view) {
-    disposers.push(diagnosticsSubscription(core, view, path));
-  }
-
-  return {
-    extensions,
-    dispose: () => disposers.forEach((d) => d()),
-  };
+  return { extensions };
 }
