@@ -67,6 +67,7 @@ export async function typstExtensions(
   path: string,
   options: TypstExtensionsOptions = {},
 ): Promise<{ extensions: Extension[] }> {
+  options ??= {};
   const extensions: Extension[] = [];
   if (options.forwardEdits !== false) extensions.push(forwardEdits(core, path));
 

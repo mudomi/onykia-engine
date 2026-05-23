@@ -30,7 +30,7 @@ const exportButton = byId<HTMLButtonElement>('export-button');
 const core = await createEngine();
 await core.create(PATH, 'text/x-typst', INITIAL);
 
-const { extensions } = await typstExtensions(core, PATH, null);
+const { extensions } = await typstExtensions(core, PATH);
 const view = new EditorView({
   parent: editorEl,
   state: EditorState.create({
