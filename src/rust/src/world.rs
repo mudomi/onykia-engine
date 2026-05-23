@@ -17,6 +17,7 @@ use typst::utils::LazyHash;
 use typst::{Library, LibraryExt, World};
 use typst_ide::IdeWorld;
 use typst_library::{Feature, Features};
+use wasm_bindgen::JsValue;
 
 use crate::packages;
 use crate::vfs::Vfs;
@@ -329,8 +330,29 @@ impl World for OnykiaWorld {
         }
     }
 
-    fn today(&self, _offset: Option<i64>) -> Option<Datetime> {
-        None
+    fn today(&self, offset: Option<i64>) -> Option<Datetime> {
+        let (year, month, day) = match offset {
+            None => {
+                let now = js_sys::Date::new_0();
+                (
+                    now.get_full_year() as i32,
+                    now.get_month() as u8 + 1, // JS months are 0-based.
+                    now.get_date() as u8,
+                )
+            }
+            Some(hours) => {
+                let shifted = js_sys::Date::new(&JsValue::from_f64(
+                    js_sys::Date::now() + hours as f64 * 3_600_000.0,
+                ));
+                (
+                    shifted.get_utc_full_year() as i32,
+                    shifted.get_utc_month() as u8 + 1,
+                    shifted.get_utc_date() as u8,
+                )
+            }
+        };
+
+        Datetime::from_ymd(year, month, day)
     }
 }
 
