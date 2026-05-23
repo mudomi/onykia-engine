@@ -9,7 +9,13 @@ export { autocompleteExtension } from './autocomplete.js';
 export { tooltipExtension } from './tooltip.js';
 export { definitionExtension } from './definition.js';
 export type { DefinitionHandlers } from './definition.js';
-export { applyDiagnostics, diagnosticsSubscription } from './diagnostics.js';
+export {
+  applyDiagnostics,
+  diagnosticsSubscription,
+  modificationTracker,
+  disposeModificationTracker,
+} from './diagnostics.js';
+export type { DiagnosticsFilterOptions } from './diagnostics.js';
 export { forwardEdits, primeFile } from './edits.js';
 export { dollarExtension } from './math.js';
 export { defaultTypstHighlightStyle, typstTags, nameToTag } from './tags.js';
