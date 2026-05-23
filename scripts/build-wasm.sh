@@ -26,7 +26,12 @@ find "$EXAMPLE" -mindepth 1 ! -name .gitkeep -exec rm -rf {} +
 cargo_flags=()
 [[ $PROFILE == release ]] && cargo_flags+=(--release)
 
-rustup toolchain install nightly --profile minimal --component rust-src --target wasm32-unknown-unknown >/dev/null
+
+nightly_components="$(rustup component list --toolchain nightly 2>/dev/null || true)"
+if ! grep -q 'rust-src (installed)' <<<"$nightly_components" \
+  || ! grep -q 'rust-std-wasm32-unknown-unknown (installed)' <<<"$nightly_components"; then
+  rustup toolchain install nightly --profile minimal --component rust-src --target wasm32-unknown-unknown >/dev/null
+fi
 
 # Atomics + shared memory + TLS exports required by wasm-bindgen-rayon 1.3.
 # +mutable-globals was dropped upstream in 1.3.0 and is no longer needed.
