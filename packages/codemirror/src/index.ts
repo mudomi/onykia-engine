@@ -21,6 +21,12 @@ export { dollarExtension } from './math.js';
 export { defaultTypstHighlightStyle, typstTags, nameToTag } from './tags.js';
 export { spellcheckExtension, wireCoreSpellcheck } from './spellcheck.js';
 export type { SpellChecker, SpellcheckExtensionOptions } from './spellcheck.js';
+export { awarenessCursorExtension } from './awareness.js';
+export type {
+  AwarenessTransport,
+  CursorCodec,
+  AwarenessCursorOptions,
+} from './awareness.js';
 
 import type { Core } from '@mudomi/onykia-engine';
 import type { Extension } from '@codemirror/state';
