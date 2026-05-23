@@ -27,6 +27,8 @@ export type {
   CursorCodec,
   AwarenessCursorOptions,
 } from './awareness.js';
+export { dropFileExtension } from './dragdrop.js';
+export type { DropResolver, DroppedFile, DropFileOptions } from './dragdrop.js';
 
 import type { Core } from '@mudomi/onykia-engine';
 import type { Extension } from '@codemirror/state';
