@@ -16,7 +16,7 @@ export {
   disposeModificationTracker,
 } from './diagnostics.js';
 export type { DiagnosticsFilterOptions } from './diagnostics.js';
-export { forwardEdits, primeFile } from './edits.js';
+export { forwardEdits, pushEditToCore, pendingEdit, primeFile } from './edits.js';
 export { dollarExtension } from './math.js';
 export { defaultTypstHighlightStyle, typstTags, nameToTag } from './tags.js';
 
