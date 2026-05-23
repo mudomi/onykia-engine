@@ -12,6 +12,7 @@ import type { Core } from '@mudomi/onykia-engine';
 
 import { defaultTypstHighlightStyle, nameToTag } from './tags.js';
 import { buildByteToCharMap } from './offsets.js';
+import { pendingEdit } from './edits.js';
 
 const setHighlightEffect = StateEffect.define<DecorationSet>();
 
@@ -68,6 +69,10 @@ export async function highlightExtension(
           while (this.dirty) {
             this.dirty = false;
             const snapshot = this.view.state.doc;
+            // Wait for the edit triggered by the same CM transaction to be
+            // applied on the worker — otherwise highlight() tokenizes the
+            // pre-edit document and we render decorations one keystroke stale.
+            await pendingEdit(path);
             const { data } = await core.highlight(path);
             // If the doc changed during the fetch, retry with fresh state.
             if (this.view.state.doc !== snapshot) {
