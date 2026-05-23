@@ -59,6 +59,7 @@ export async function typstExtensions(
 ): Promise<{ extensions: Extension[]; dispose: () => void }> {
   const extensions: Extension[] = [];
   const disposers: (() => void)[] = [];
+  if (options.forwardEdits !== false) extensions.push(forwardEdits(core, path));
 
   if (options.highlight !== false) {
     const hl = await highlightExtension(core, path, options.highlight ?? {});
@@ -72,7 +73,6 @@ export async function typstExtensions(
     extensions.push(definitionExtension(core, path, handlers));
   }
   if (options.dollarAutoPair !== false) extensions.push(dollarExtension());
-  if (options.forwardEdits !== false) extensions.push(forwardEdits(core, path));
 
   if (options.wireDiagnostics !== false && view) {
     disposers.push(diagnosticsSubscription(core, view, path));
