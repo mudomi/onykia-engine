@@ -1,3 +1,15 @@
+# [0.4.0](https://github.com/mudomi/onykia-engine/compare/v0.3.0...v0.4.0) (2026-05-24)
+
+
+### Bug Fixes
+
+* add datetime.today implementation using js_sys ([#34](https://github.com/mudomi/onykia-engine/issues/34)) ([f1c2337](https://github.com/mudomi/onykia-engine/commit/f1c233756e59a91886d1e5cacee3c1713ab7105a))
+
+
+### Features
+
+* codemirror extension additions (awareness, spellcheck, drag/drop,   edit helpers) ([#35](https://github.com/mudomi/onykia-engine/issues/35)) ([e3a700a](https://github.com/mudomi/onykia-engine/commit/e3a700ab56ed9d84480b75290fd25ac2f6387cd7))
+
 # [0.3.0](https://github.com/mudomi/onykia-engine/compare/v0.2.1...v0.3.0) (2026-05-14)
 
 
