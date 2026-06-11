@@ -12,7 +12,7 @@ async function onBoot(event) {
   if (msg?.tag !== 'boot') return;
 
   try {
-    await init({ module: msg.module, memory: msg.memory });
+    await init({ module_or_path: msg.module, memory: msg.memory });
 
     // Resolved by the wasm-bindgen `module = "/js/bridge.js"` imports.
     self.__onykia = {
