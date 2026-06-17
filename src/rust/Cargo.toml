@@ -11,17 +11,18 @@ repository = "https://github.com/mudomi/onykia-engine"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# Typst compiler pieces. Pinned to 0.14 to match the target language level.
-typst = "0.14"
-typst-assets = { version = "0.14", features = ["fonts"] }
-typst-syntax = "0.14"
-typst-ide = "0.14"
-typst-library = "0.14"
-typst-pdf = "0.14"
-typst-html = "0.14"
-typst-svg = "0.14"
-typst-render = "0.14"
-typst-utils = "0.14"
+# Typst compiler pieces. Pinned to 0.15 to match the target language level.
+typst = "0.15"
+typst-assets = { version = "0.15", features = ["fonts"] }
+typst-syntax = "0.15"
+typst-layout = "0.15"
+typst-ide = "0.15"
+typst-library = "0.15"
+typst-pdf = "0.15"
+typst-html = "0.15"
+typst-svg = "0.15"
+typst-render = "0.15"
+typst-utils = "0.15"
 
 # WASM bridge. Version is pinned exactly because the wasm-bindgen runtime
 # schema is unstable and must match the wasm-bindgen-cli used at build time.

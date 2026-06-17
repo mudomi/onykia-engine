@@ -5,8 +5,8 @@ use std::collections::HashSet;
 
 use ecow::EcoVec;
 use typst::diag::SourceDiagnostic;
-use typst::layout::PagedDocument;
 use typst::syntax::package::PackageSpec;
+use typst_layout::PagedDocument;
 use wasm_bindgen::prelude::*;
 
 use crate::world::OnykiaWorld;
