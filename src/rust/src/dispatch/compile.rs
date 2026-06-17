@@ -254,10 +254,11 @@ fn extract_outline(doc: &PagedDocument) -> Vec<OutlineEntry> {
     // (`#heading(outlined: false)` opts out) and level resolution match it
     // exactly.
     use typst::foundations::NativeElement;
+    use typst::introspection::Introspector;
     use typst::model::{HeadingElem, Outlinable};
 
     let flat: Vec<OutlineEntry> = doc
-        .introspector
+        .introspector()
         .query(&HeadingElem::ELEM.select())
         .into_iter()
         .filter_map(|elem| {
@@ -267,7 +268,7 @@ fn extract_outline(doc: &PagedDocument) -> Vec<OutlineEntry> {
             }
             let position = elem
                 .location()
-                .map(|loc| doc.introspector.position(loc))
+                .and_then(|loc| doc.introspector().position(loc))
                 .map(|p| OutlinePosition {
                     page: p.page.get() - 1,
                     x: p.point.x.to_pt(),
