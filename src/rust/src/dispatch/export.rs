@@ -1,8 +1,9 @@
 //! Export / render / archive handlers.
 
 use serde::{Deserialize, Serialize};
-use typst::layout::{Page, PagedDocument};
+use typst::utils::Scalar;
 use typst_html::HtmlDocument;
+use typst_layout::{Page, PagedDocument};
 use wasm_bindgen::prelude::*;
 
 use crate::protocol::{from_js, to_js};
@@ -51,7 +52,7 @@ fn require_paged(state: &State) -> Result<&PagedDocument, String> {
 }
 
 fn page_at(doc: &PagedDocument, index: usize) -> Result<&Page, String> {
-    doc.pages
+    doc.pages()
         .get(index)
         .ok_or_else(|| "page out of range".to_string())
 }
@@ -67,7 +68,7 @@ fn export_pdf(doc: &PagedDocument) -> Result<ExportResponse, String> {
 }
 
 fn export_svg(page: &Page) -> ExportResponse {
-    let svg = typst_svg::svg(page);
+    let svg = typst_svg::svg(page, &typst_svg::SvgOptions::default());
     ExportResponse {
         data: svg.into_bytes(),
         mime: "image/svg+xml",
@@ -79,9 +80,16 @@ const DEFAULT_PNG_PPI: f32 = 144.0;
 // Typst measures lengths in points; typst_render takes pixels-per-pt.
 const PT_PER_INCH: f32 = 72.0;
 
+fn render_options(pixels_per_pt: f32) -> typst_render::RenderOptions {
+    typst_render::RenderOptions {
+        pixel_per_pt: Scalar::new(pixels_per_pt as f64),
+        ..Default::default()
+    }
+}
+
 fn export_png(page: &Page, ppi: Option<f32>) -> Result<ExportResponse, String> {
     let pixels_per_pt = ppi.unwrap_or(DEFAULT_PNG_PPI) / PT_PER_INCH;
-    let pixmap = typst_render::render(page, pixels_per_pt);
+    let pixmap = typst_render::render(page, &render_options(pixels_per_pt));
     let png = pixmap
         .encode_png()
         .map_err(|e| format!("png encode: {e}"))?;
@@ -97,7 +105,8 @@ fn export_html(state: &State) -> Result<ExportResponse, String> {
     let doc = typst::compile::<HtmlDocument>(&state.world)
         .output
         .map_err(|errs| format!("html: {} error(s)", errs.len()))?;
-    let html = typst_html::html(&doc).map_err(|errs| format!("html: {} error(s)", errs.len()))?;
+    let html = typst_html::html(&doc, &typst_html::HtmlOptions::default())
+        .map_err(|errs| format!("html: {} error(s)", errs.len()))?;
     Ok(ExportResponse {
         data: html.into_bytes(),
         mime: "text/html",
@@ -123,7 +132,7 @@ pub fn render(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     let args: RenderArgs = from_js(args)?;
     let page = page_at(require_paged(state)?, args.index)?;
 
-    let pixmap = typst_render::render(page, args.zoom);
+    let pixmap = typst_render::render(page, &render_options(args.zoom));
     let width = pixmap.width();
     let rgba = pixmap.data().to_vec();
 

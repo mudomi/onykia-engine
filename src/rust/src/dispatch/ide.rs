@@ -1,6 +1,7 @@
 //! IDE features: tags / highlight / autocomplete / tooltip / definition / jump.
 
 use serde::{Deserialize, Serialize};
+use typst::WorldExt;
 use typst::syntax::{Side, SyntaxKind, SyntaxNode};
 use wasm_bindgen::prelude::*;
 
@@ -108,7 +109,7 @@ fn map_kind(kind: SyntaxKind) -> Option<u32> {
         K::Heading | K::HeadingMarker => 9,    // typ-heading
         K::ListMarker | K::EnumMarker | K::TermMarker => 10, // typ-marker
         K::Dollar | K::MathDelimited => 12,    // typ-math-delim
-        K::Underscore | K::Hat | K::Prime => 13, // typ-math-op
+        K::Underscore | K::Hat | K::MathPrimes => 13, // typ-math-op
         K::Let
         | K::Set
         | K::Show
@@ -394,14 +395,12 @@ pub fn definition(state: &mut State, args: JsValue) -> Result<JsValue, String> {
 
     if let typst_ide::Definition::Span(span) = def {
         if let Some(id) = span.id() {
-            if let Some((path, file)) = state.world.vfs.find_by_id(id) {
-                if let Some(src) = file.source() {
-                    if let Some(range) = src.range(span) {
-                        return to_js(&DefinitionResponse::Source {
-                            path: path.to_string(),
-                            pos: range.start,
-                        });
-                    }
+            if let Some((path, _)) = state.world.vfs.find_by_id(id) {
+                if let Some(range) = state.world.range(span) {
+                    return to_js(&DefinitionResponse::Source {
+                        path: path.to_string(),
+                        pos: range.start,
+                    });
                 }
             }
         }
@@ -459,7 +458,7 @@ pub fn jump_from_click(state: &mut State, args: JsValue) -> Result<JsValue, Stri
     let Some(doc) = state.last_document.as_ref() else {
         return Ok(JsValue::NULL);
     };
-    let Some(page) = doc.pages.get(args.index) else {
+    let Some(page) = doc.pages().get(args.index) else {
         return Ok(JsValue::NULL);
     };
 
@@ -467,7 +466,8 @@ pub fn jump_from_click(state: &mut State, args: JsValue) -> Result<JsValue, Stri
         typst::layout::Abs::pt(args.x),
         typst::layout::Abs::pt(args.y),
     );
-    let Some(jump) = typst_ide::jump_from_click(&state.world, doc, &page.frame, point) else {
+    let Some(jump) = typst_ide::jump_from_click_in_frame(&state.world, doc, &page.frame, point)
+    else {
         return Ok(JsValue::NULL);
     };
 

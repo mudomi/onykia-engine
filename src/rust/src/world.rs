@@ -2,14 +2,15 @@
 //! backed by the VFS.
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use ecow::EcoString;
 use rayon::prelude::*;
 use typst::diag::{FileError, FileResult, PackageError};
-use typst::foundations::{Bytes, Datetime};
+use typst::foundations::{Bytes, Datetime, Duration};
 use typst::syntax::package::PackageSpec;
-use typst::syntax::{FileId, Source, VirtualPath};
+use typst::syntax::{FileId, Source, VirtualRoot};
 use typst::text::{
     Coverage, Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant, FontWeight,
 };
@@ -20,7 +21,11 @@ use typst_library::{Feature, Features};
 use wasm_bindgen::JsValue;
 
 use crate::packages;
-use crate::vfs::Vfs;
+use crate::vfs::{Vfs, file_id};
+
+// Stand-in main file used before the host calls setMain, so the compiler has
+// something to resolve instead of erroring out.
+const EMPTY_MAIN_PATH: &str = "/__empty__.typ";
 
 pub struct OnykiaWorld {
     pub vfs: Vfs,
@@ -121,6 +126,7 @@ impl OnykiaWorld {
                 },
                 flags: FontFlags::empty(),
                 coverage: Coverage::from_vec(Vec::new()),
+                axes: Vec::new(),
             };
             let index = self.font_slots.len();
             self.font_infos.push(info);
@@ -213,7 +219,7 @@ impl OnykiaWorld {
 
     fn main_id(&self) -> Option<FileId> {
         let path = self.main_path.as_deref()?;
-        Some(FileId::new(None, VirtualPath::new(path)))
+        Some(file_id(VirtualRoot::Project, path))
     }
 
     fn package_status(&self, id: FileId, spec: &PackageSpec) -> PackageStatus {
@@ -275,11 +281,11 @@ impl World for OnykiaWorld {
 
     fn main(&self) -> FileId {
         self.main_id()
-            .unwrap_or_else(|| FileId::new(None, VirtualPath::new("/__empty__.typ")))
+            .unwrap_or_else(|| file_id(VirtualRoot::Project, EMPTY_MAIN_PATH))
     }
 
     fn source(&self, id: FileId) -> FileResult<Source> {
-        if let Some(spec) = id.package() {
+        if let VirtualRoot::Package(spec) = id.root() {
             if let Some(entry) = self.vfs.find_package(id) {
                 return entry.source().cloned().ok_or(FileError::NotSource);
             }
@@ -292,16 +298,14 @@ impl World for OnykiaWorld {
             return Err(FileError::NotSource);
         }
         // Empty sentinel so the compiler doesn't explode before setMain is called.
-        if id == FileId::new(None, VirtualPath::new("/__empty__.typ")) {
+        if id == file_id(VirtualRoot::Project, EMPTY_MAIN_PATH) {
             return Ok(Source::new(id, String::new()));
         }
-        Err(FileError::NotFound(
-            id.vpath().as_rooted_path().to_path_buf(),
-        ))
+        Err(FileError::NotFound(PathBuf::from(id.vpath().get_with_slash())))
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        if let Some(spec) = id.package() {
+        if let VirtualRoot::Package(spec) = id.root() {
             if let Some(entry) = self.vfs.find_package(id) {
                 return Ok(entry.bytes.clone());
             }
@@ -310,9 +314,7 @@ impl World for OnykiaWorld {
         if let Some((_, file)) = self.vfs.find_by_id(id) {
             return Ok(file.bytes.clone());
         }
-        Err(FileError::NotFound(
-            id.vpath().as_rooted_path().to_path_buf(),
-        ))
+        Err(FileError::NotFound(PathBuf::from(id.vpath().get_with_slash())))
     }
 
     fn font(&self, index: usize) -> Option<Font> {
@@ -330,7 +332,7 @@ impl World for OnykiaWorld {
         }
     }
 
-    fn today(&self, offset: Option<i64>) -> Option<Datetime> {
+    fn today(&self, offset: Option<Duration>) -> Option<Datetime> {
         let (year, month, day) = match offset {
             None => {
                 let now = js_sys::Date::new_0();
@@ -340,9 +342,9 @@ impl World for OnykiaWorld {
                     now.get_date() as u8,
                 )
             }
-            Some(hours) => {
+            Some(offset) => {
                 let shifted = js_sys::Date::new(&JsValue::from_f64(
-                    js_sys::Date::now() + hours as f64 * 3_600_000.0,
+                    js_sys::Date::now() + offset.hours() * 3_600_000.0,
                 ));
                 (
                     shifted.get_utc_full_year() as i32,
@@ -360,7 +362,7 @@ impl OnykiaWorld {
     fn package_file_error(&self, id: FileId, spec: &PackageSpec) -> FileError {
         match self.package_status(id, spec) {
             PackageStatus::Installed => {
-                FileError::NotFound(id.vpath().as_rooted_path().to_path_buf())
+                FileError::NotFound(PathBuf::from(id.vpath().get_with_slash()))
             }
             PackageStatus::Pending | PackageStatus::FetchFailed => {
                 FileError::Package(PackageError::NotFound(spec.clone()))
