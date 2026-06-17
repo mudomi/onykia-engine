@@ -16,7 +16,6 @@ $ integral_0^1 x^2 dif x = 1/3 $
 const editorEl = document.getElementById('editor')!;
 const previewEl = document.getElementById('preview')!;
 const outlineEl = document.getElementById('outline')!;
-const outlineToggle = document.getElementById('outline-toggle') as HTMLButtonElement;
 
 const model = monaco.editor.createModel(INITIAL, 'plaintext');
 monaco.editor.create(editorEl, { model, automaticLayout: true, minimap: { enabled: false } });
@@ -26,11 +25,6 @@ await primeFile(core, model, PATH);
 bindTypst(core, model, PATH);
 
 core.onOutline(({ entries }) => renderOutline(entries));
-
-outlineToggle.addEventListener('click', () => {
-  outlineEl.hidden = !outlineEl.hidden;
-  outlineToggle.setAttribute('aria-expanded', String(!outlineEl.hidden));
-});
 
 core.onPages(async ({ pages }) => {
   if (pages.length === 0) return;

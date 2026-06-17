@@ -22,7 +22,6 @@ type ExportFormat = 'pdf' | 'svg' | 'png';
 const editorEl = byId('editor');
 const previewEl = byId('preview');
 const outlineEl = byId('outline');
-const outlineToggle = byId<HTMLButtonElement>('outline-toggle');
 const previewSelect = byId<HTMLSelectElement>('preview-format');
 const exportFormatSelect = byId<HTMLSelectElement>('export-format');
 const exportPageSelect = byId<HTMLSelectElement>('export-page');
@@ -56,11 +55,6 @@ core.onPages(({ pages: next }) => {
   if (pages.length > 0) void refreshPreview();
 });
 core.onOutline(({ entries }) => renderOutline(entries));
-
-outlineToggle.addEventListener('click', () => {
-  outlineEl.hidden = !outlineEl.hidden;
-  outlineToggle.setAttribute('aria-expanded', String(!outlineEl.hidden));
-});
 
 previewSelect.addEventListener('change', () => {
   if (pages.length > 0) void refreshPreview();
