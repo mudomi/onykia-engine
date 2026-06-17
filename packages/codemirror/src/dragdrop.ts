@@ -1,9 +1,9 @@
 // Drop/paste a file into a Typst document and get a sensible insert
-// (`#image("…")`, `#read("…")`, `#bibliography("…")`, …) based on MIME.
+// (`#image("...")`, `#read("...")`, `#bibliography("...")`, ...) based on MIME.
 //
 // Transport-agnostic: resolving a dragged item to a project-relative path
 // (and uploading OS files) is the consumer's job, behind {@link DropResolver}.
-// This extension only handles the editor side — the drop indicator, the DOM
+// This extension only handles the editor side - the drop indicator, the DOM
 // events, and turning a resolved file into Typst source at the drop position.
 
 import { StateEffect, type Extension } from '@codemirror/state';
@@ -40,7 +40,7 @@ export interface DropFileOptions {
 }
 
 /**
- * MIME → Typst snippet. `{path}` is replaced with the file's relative path.
+ * MIME -> Typst snippet. `{path}` is replaced with the file's relative path.
  * A {@link DroppedFile.snippet} supplied by the resolver always wins over this.
  */
 function defaultSnippet(mime: string | undefined, path: string): string {

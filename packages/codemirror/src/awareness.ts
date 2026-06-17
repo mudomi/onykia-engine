@@ -34,7 +34,7 @@ export interface AwarenessTransport {
 
 /**
  * Converts between document offsets and a stable cursor representation `C`.
- * `C` must be JSON-serializable — it travels over the transport verbatim.
+ * `C` must be JSON-serializable - it travels over the transport verbatim.
  */
 export interface CursorCodec<C> {
   create(pos: number): C | null;

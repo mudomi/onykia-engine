@@ -17,7 +17,7 @@ import type { Core, Diagnostic } from '@mudomi/onykia-engine';
 import { fromByteOffset } from './offsets.js';
 
 /**
- * Spellcheck for `@mudomi/onykia-codemirror`. **Bring your own backend** — the
+ * Spellcheck for `@mudomi/onykia-codemirror`. **Bring your own backend** - the
  * package depends on nothing spellcheck-specific. Implement {@link SpellChecker}
  * with hunspell-asm, nspell, the browser's native API, or a remote service, and
  * compose {@link spellcheckExtension} into your editor. It is opt-in: the Typst
