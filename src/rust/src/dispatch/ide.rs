@@ -1,8 +1,8 @@
 //! IDE features: tags / highlight / autocomplete / tooltip / definition / jump.
 
 use serde::{Deserialize, Serialize};
-use typst::WorldExt;
 use typst::syntax::{Side, SyntaxKind, SyntaxNode};
+use typst::WorldExt;
 use wasm_bindgen::prelude::*;
 
 use crate::protocol::{from_js, to_js};

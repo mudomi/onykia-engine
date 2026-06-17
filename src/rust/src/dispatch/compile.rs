@@ -2,10 +2,10 @@
 
 use ecow::EcoVec;
 use serde::Serialize;
-use typst::WorldExt;
 use typst::diag::{Severity, SourceDiagnostic};
 use typst::syntax::package::PackageSpec;
 use typst::syntax::{DiagSpan, VirtualRoot};
+use typst::WorldExt;
 use typst_layout::PagedDocument;
 
 use super::notify::{
@@ -205,10 +205,7 @@ fn diagnostics_notif(state: &State, diags: &EcoVec<SourceDiagnostic>) -> Diagnos
     DiagnosticsNotification { diagnostics: out }
 }
 
-fn resolve_span(
-    state: &State,
-    span: DiagSpan,
-) -> (Option<String>, Option<String>, Option<Range>) {
+fn resolve_span(state: &State, span: DiagSpan) -> (Option<String>, Option<String>, Option<Range>) {
     let Some(id) = span.id() else {
         return (None, None, None);
     };

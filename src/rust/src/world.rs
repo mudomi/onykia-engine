@@ -21,7 +21,7 @@ use typst_library::{Feature, Features};
 use wasm_bindgen::JsValue;
 
 use crate::packages;
-use crate::vfs::{Vfs, file_id};
+use crate::vfs::{file_id, Vfs};
 
 // Stand-in main file used before the host calls setMain, so the compiler has
 // something to resolve instead of erroring out.
@@ -301,7 +301,9 @@ impl World for OnykiaWorld {
         if id == file_id(VirtualRoot::Project, EMPTY_MAIN_PATH) {
             return Ok(Source::new(id, String::new()));
         }
-        Err(FileError::NotFound(PathBuf::from(id.vpath().get_with_slash())))
+        Err(FileError::NotFound(PathBuf::from(
+            id.vpath().get_with_slash(),
+        )))
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
@@ -314,7 +316,9 @@ impl World for OnykiaWorld {
         if let Some((_, file)) = self.vfs.find_by_id(id) {
             return Ok(file.bytes.clone());
         }
-        Err(FileError::NotFound(PathBuf::from(id.vpath().get_with_slash())))
+        Err(FileError::NotFound(PathBuf::from(
+            id.vpath().get_with_slash(),
+        )))
     }
 
     fn font(&self, index: usize) -> Option<Font> {
