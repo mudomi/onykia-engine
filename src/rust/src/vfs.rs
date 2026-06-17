@@ -9,7 +9,13 @@ use std::collections::HashMap;
 
 use typst::foundations::Bytes;
 use typst::syntax::package::PackageSpec;
-use typst::syntax::{FileId, Source, VirtualPath};
+use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
+
+pub fn file_id(root: VirtualRoot, path: &str) -> FileId {
+    let vpath = VirtualPath::new(path)
+        .unwrap_or_else(|_| VirtualPath::new("/").expect("root path is always valid"));
+    FileId::new(RootedPath::new(root, vpath))
+}
 
 pub struct File {
     pub mime: String,
@@ -19,7 +25,7 @@ pub struct File {
 
 impl File {
     pub fn new(path: &str, mime: String, bytes: Bytes) -> Self {
-        let id = FileId::new(None, VirtualPath::new(path));
+        let id = file_id(VirtualRoot::Project, path);
         Self::with_id(id, mime, bytes)
     }
 
@@ -71,7 +77,7 @@ impl Vfs {
     }
 
     pub fn create(&mut self, path: String, mime: String, bytes: Vec<u8>) {
-        let id = FileId::new(None, VirtualPath::new(&path));
+        let id = file_id(VirtualRoot::Project, &path);
         self.file_ids.insert(id, path.clone());
         let bytes = Bytes::new(bytes);
         self.files
@@ -79,7 +85,7 @@ impl Vfs {
     }
 
     pub fn delete(&mut self, path: &str) -> bool {
-        let id = FileId::new(None, VirtualPath::new(path));
+        let id = file_id(VirtualRoot::Project, path);
         self.file_ids.remove(&id);
         self.files.remove(path).is_some()
     }
@@ -91,9 +97,9 @@ impl Vfs {
         if let Some(m) = mime {
             file.mime = m;
         }
-        let old_id = FileId::new(None, VirtualPath::new(from));
+        let old_id = file_id(VirtualRoot::Project, from);
         self.file_ids.remove(&old_id);
-        let new_id = FileId::new(None, VirtualPath::new(to));
+        let new_id = file_id(VirtualRoot::Project, to);
         self.file_ids.insert(new_id, to.to_string());
         // Rebuild source with new id.
         let rebuilt = File::new(to, file.mime, file.bytes);
@@ -117,7 +123,7 @@ impl Vfs {
     }
 
     pub fn find_by_id(&self, id: FileId) -> Option<(&str, &File)> {
-        if id.package().is_some() {
+        if matches!(id.root(), VirtualRoot::Package(_)) {
             return None;
         }
         let path = self.file_ids.get(&id)?;
@@ -130,7 +136,7 @@ impl Vfs {
     }
 
     pub fn install_package_file(&mut self, spec: &PackageSpec, vpath: &str, bytes: Vec<u8>) {
-        let id = FileId::new(Some(spec.clone()), VirtualPath::new(vpath));
+        let id = file_id(VirtualRoot::Package(spec.clone()), vpath);
         self.packages
             .insert(id, PackageEntry::new(id, Bytes::new(bytes)));
     }
@@ -184,11 +190,7 @@ fn is_typst_mime(mime: &str) -> bool {
 /// Tar entries don't carry a mime; infer one from the extension so package
 /// `.typ`/`.typc` files become parseable Typst sources.
 fn mime_for_vpath(vpath: &VirtualPath) -> &'static str {
-    let ext = vpath
-        .as_rooted_path()
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("");
+    let ext = vpath.extension().unwrap_or("");
     match ext {
         "typ" | "typc" => "text/x-typst",
         _ => "application/octet-stream",

@@ -3,8 +3,10 @@
 use ecow::EcoVec;
 use serde::Serialize;
 use typst::diag::{Severity, SourceDiagnostic};
-use typst::layout::PagedDocument;
 use typst::syntax::package::PackageSpec;
+use typst::syntax::{DiagSpan, VirtualRoot};
+use typst::WorldExt;
+use typst_layout::PagedDocument;
 
 use super::notify::{
     self, Diagnostic, DiagnosticsNotification, OutlineEntry, OutlineNotification, PageInfo,
@@ -197,36 +199,27 @@ fn diagnostics_notif(state: &State, diags: &EcoVec<SourceDiagnostic>) -> Diagnos
             path,
             package,
             id: None,
-            hints: diag.hints.iter().map(|h| h.to_string()).collect(),
+            hints: diag.hints.iter().map(|h| h.v.to_string()).collect(),
         });
     }
     DiagnosticsNotification { diagnostics: out }
 }
 
-fn resolve_span(
-    state: &State,
-    span: typst::syntax::Span,
-) -> (Option<String>, Option<String>, Option<Range>) {
+fn resolve_span(state: &State, span: DiagSpan) -> (Option<String>, Option<String>, Option<Range>) {
     let Some(id) = span.id() else {
         return (None, None, None);
     };
-    if let Some(spec) = id.package() {
+    if let VirtualRoot::Package(spec) = id.root() {
         return (None, Some(spec.to_string()), None);
     }
-    let Some((path, file)) = state.world.vfs.find_by_id(id) else {
+    let Some((path, _)) = state.world.vfs.find_by_id(id) else {
         return (None, None, None);
     };
-    let range = source_range_for(file, span);
+    let range = state.world.range(span).map(|r| Range {
+        start: r.start,
+        end: r.end,
+    });
     (Some(path.to_string()), None, range)
-}
-
-fn source_range_for(file: &crate::vfs::File, span: typst::syntax::Span) -> Option<Range> {
-    let source = file.source()?;
-    let range = source.range(span)?;
-    Some(Range {
-        start: range.start,
-        end: range.end,
-    })
 }
 
 fn pages_notif(state: &State) -> PagesNotification {
@@ -234,7 +227,7 @@ fn pages_notif(state: &State) -> PagesNotification {
         return PagesNotification { pages: Vec::new() };
     };
     let pages = doc
-        .pages
+        .pages()
         .iter()
         .map(|p| PageInfo {
             width: p.frame.width().to_pt(),
