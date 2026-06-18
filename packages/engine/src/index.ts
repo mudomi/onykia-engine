@@ -18,6 +18,7 @@ export type {
   DiagnosticsNotification,
   OutlineEntry,
   OutlineNotification,
+  OutlinePosition,
   PageInfo,
   PagesNotification,
   Diagnostic,

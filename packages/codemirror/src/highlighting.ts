@@ -70,7 +70,7 @@ export async function highlightExtension(
             this.dirty = false;
             const snapshot = this.view.state.doc;
             // Wait for the edit triggered by the same CM transaction to be
-            // applied on the worker — otherwise highlight() tokenizes the
+            // applied on the worker - otherwise highlight() tokenizes the
             // pre-edit document and we render decorations one keystroke stale.
             await pendingEdit(path);
             const { data } = await core.highlight(path);

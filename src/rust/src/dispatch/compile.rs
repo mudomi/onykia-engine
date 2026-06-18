@@ -9,8 +9,8 @@ use typst::WorldExt;
 use typst_layout::PagedDocument;
 
 use super::notify::{
-    self, Diagnostic, DiagnosticsNotification, OutlineEntry, OutlineNotification, PageInfo,
-    PagesNotification, Range, StatusNotification,
+    self, Diagnostic, DiagnosticsNotification, OutlineEntry, OutlineNotification, OutlinePosition,
+    PageInfo, PagesNotification, Range, StatusNotification,
 };
 use crate::ask;
 use crate::packages;
@@ -238,16 +238,180 @@ fn pages_notif(state: &State) -> PagesNotification {
 }
 
 fn outline_notif(state: &State) -> OutlineNotification {
-    // TODO: implement outline extraction.
-    let _ = state;
+    let Some(doc) = state.last_document.as_ref() else {
+        return OutlineNotification {
+            entries: Vec::new(),
+        };
+    };
     OutlineNotification {
-        entries: Vec::<OutlineEntry>::new(),
+        entries: extract_outline(doc),
     }
+}
+
+fn extract_outline(doc: &PagedDocument) -> Vec<OutlineEntry> {
+    // Query every heading the document laid out, in document order. The
+    // `Outlinable` trait is what `#outline()` itself consults, so inclusion
+    // (`#heading(outlined: false)` opts out) and level resolution match it
+    // exactly.
+    use typst::foundations::NativeElement;
+    use typst::introspection::Introspector;
+    use typst::model::{HeadingElem, Outlinable};
+
+    let flat: Vec<OutlineEntry> = doc
+        .introspector()
+        .query(&HeadingElem::ELEM.select())
+        .into_iter()
+        .filter_map(|elem| {
+            let heading = elem.to_packed::<HeadingElem>()?;
+            if !heading.outlined() {
+                return None;
+            }
+            let position = elem
+                .location()
+                .and_then(|loc| doc.introspector().position(loc))
+                .map(|p| OutlinePosition {
+                    page: p.page.get() - 1,
+                    x: p.point.x.to_pt(),
+                    y: p.point.y.to_pt(),
+                })?;
+            Some(OutlineEntry {
+                level: heading.level().get() as u32,
+                title: heading.body.plain_text().to_string(),
+                position,
+                children: Vec::new(),
+            })
+        })
+        .collect();
+
+    nest_by_level(flat)
+}
+
+/// Fold a flat, document-ordered list of entries into a tree. Each entry
+/// nests under the most recent entry with a strictly smaller level. Level
+/// jumps (e.g. `=` then `===`) are tolerated: the deeper entry simply
+/// attaches to whatever shallower entry is currently open.
+fn nest_by_level(flat: Vec<OutlineEntry>) -> Vec<OutlineEntry> {
+    let mut roots: Vec<OutlineEntry> = Vec::new();
+    // Stack of indices describing the path from a root down to the last entry.
+    let mut path: Vec<usize> = Vec::new();
+    let mut levels: Vec<u32> = Vec::new();
+
+    for entry in flat {
+        let level = entry.level;
+        while levels.last().is_some_and(|&l| l >= level) {
+            path.pop();
+            levels.pop();
+        }
+        let siblings = children_at_path(&mut roots, &path);
+        siblings.push(entry);
+        path.push(siblings.len() - 1);
+        levels.push(level);
+    }
+    roots
+}
+
+/// Follow `path` (a list of child indices) into the tree and return the Vec
+/// the next entry should be pushed into.
+fn children_at_path<'a>(
+    roots: &'a mut Vec<OutlineEntry>,
+    path: &[usize],
+) -> &'a mut Vec<OutlineEntry> {
+    let mut current = roots;
+    for &idx in path {
+        current = &mut current[idx].children;
+    }
+    current
 }
 
 fn severity_str(sev: Severity) -> &'static str {
     match sev {
         Severity::Error => "error",
         Severity::Warning => "warning",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::world::OnykiaWorld;
+
+    fn compile_doc(src: &str) -> PagedDocument {
+        let mut world = OnykiaWorld::new();
+        world.vfs.create(
+            "/main.typ".into(),
+            "text/x-typst".into(),
+            src.as_bytes().to_vec(),
+        );
+        world.main_path = Some("/main.typ".into());
+        typst::compile::<PagedDocument>(&world)
+            .output
+            .expect("compiles")
+    }
+
+    fn entry(level: u32, title: &str) -> OutlineEntry {
+        OutlineEntry {
+            level,
+            title: title.into(),
+            position: OutlinePosition {
+                page: 0,
+                x: 0.0,
+                y: 0.0,
+            },
+            children: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn nest_by_level_builds_tree() {
+        let flat = vec![
+            entry(1, "A"),
+            entry(2, "A.1"),
+            entry(2, "A.2"),
+            entry(3, "A.2.1"),
+            entry(1, "B"),
+        ];
+        let tree = nest_by_level(flat);
+
+        assert_eq!(tree.len(), 2);
+        assert_eq!(tree[0].title, "A");
+        assert_eq!(tree[0].children.len(), 2);
+        assert_eq!(tree[0].children[1].title, "A.2");
+        assert_eq!(tree[0].children[1].children[0].title, "A.2.1");
+        assert_eq!(tree[1].title, "B");
+        assert!(tree[1].children.is_empty());
+    }
+
+    #[test]
+    fn nest_by_level_tolerates_level_jump() {
+        // `=` then `===` (skipping level 2): the deeper entry still nests.
+        let flat = vec![entry(1, "A"), entry(3, "deep")];
+        let tree = nest_by_level(flat);
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].children.len(), 1);
+        assert_eq!(tree[0].children[0].title, "deep");
+    }
+
+    #[test]
+    fn extract_outline_from_document() {
+        let doc = compile_doc("= Intro\n== Background\n= Method\n");
+        let tree = extract_outline(&doc);
+
+        assert_eq!(tree.len(), 2, "two top-level headings");
+        assert_eq!(tree[0].title, "Intro");
+        assert_eq!(tree[0].level, 1);
+        assert_eq!(tree[0].children.len(), 1);
+        assert_eq!(tree[0].children[0].title, "Background");
+        assert_eq!(tree[0].children[0].level, 2);
+        assert_eq!(tree[1].title, "Method");
+        // Positions are real page coordinates.
+        assert!(tree[0].position.y >= 0.0);
+    }
+
+    #[test]
+    fn extract_outline_skips_non_outlined() {
+        let doc = compile_doc("= Shown\n#heading(outlined: false)[Hidden]\n");
+        let tree = extract_outline(&doc);
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].title, "Shown");
     }
 }

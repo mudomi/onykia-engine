@@ -33,10 +33,13 @@ pub struct OutlineEntry {
     pub level: u32,
     pub title: String,
     pub position: OutlinePosition,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<OutlineEntry>,
 }
 
 #[derive(Serialize)]
 pub struct OutlinePosition {
+    /// 0-based, so it indexes directly into the `pages` notification array.
     pub page: usize,
     pub x: f64,
     pub y: f64,

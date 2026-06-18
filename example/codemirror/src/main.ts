@@ -3,7 +3,7 @@ import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { lintGutter } from '@codemirror/lint';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
-import { renderToCanvas, type PageInfo } from '@mudomi/onykia-engine';
+import { renderToCanvas, type OutlineEntry, type PageInfo } from '@mudomi/onykia-engine';
 import { createEngine } from './engine.js';
 
 const PATH = '/main.typ';
@@ -21,7 +21,9 @@ type ExportFormat = 'pdf' | 'svg' | 'png';
 
 const editorEl = byId('editor');
 const previewEl = byId('preview');
+const outlineEl = byId('outline');
 const previewSelect = byId<HTMLSelectElement>('preview-format');
+const followCursor = byId<HTMLInputElement>('follow-cursor');
 const exportFormatSelect = byId<HTMLSelectElement>('export-format');
 const exportPageSelect = byId<HTMLSelectElement>('export-page');
 const exportPageLabel = byId('export-page-label');
@@ -40,6 +42,12 @@ const view = new EditorView({
       history(),
       lintGutter(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
+      // Sync the preview to the caret when "Follow cursor" is on.
+      EditorView.updateListener.of((update) => {
+        if (followCursor.checked && (update.selectionSet || update.docChanged)) {
+          scheduleFollow();
+        }
+      }),
       ...extensions,
     ],
   }),
@@ -53,9 +61,13 @@ core.onPages(({ pages: next }) => {
   syncExportControls();
   if (pages.length > 0) void refreshPreview();
 });
+core.onOutline(({ entries }) => renderOutline(entries));
 
 previewSelect.addEventListener('change', () => {
   if (pages.length > 0) void refreshPreview();
+});
+followCursor.addEventListener('change', () => {
+  if (followCursor.checked) void followCursorToPreview();
 });
 exportFormatSelect.addEventListener('change', syncExportControls);
 exportButton.addEventListener('click', () => void downloadExport());
@@ -109,7 +121,73 @@ async function renderHtmlPreview(): Promise<void> {
   previewEl.replaceChildren(iframe);
 }
 
-//  export 
+//  outline
+
+function renderOutline(entries: OutlineEntry[]): void {
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'No headings';
+    outlineEl.replaceChildren(empty);
+    return;
+  }
+  outlineEl.replaceChildren(outlineList(entries));
+}
+
+function outlineList(entries: OutlineEntry[]): HTMLUListElement {
+  const list = document.createElement('ul');
+  for (const entry of entries) {
+    const item = document.createElement('li');
+    const jump = document.createElement('button');
+    jump.textContent = entry.title || '(untitled)';
+    jump.addEventListener('click', () => scrollToPage(entry.position.page));
+    item.append(jump);
+    if (entry.children) item.append(outlineList(entry.children));
+    list.append(item);
+  }
+  return list;
+}
+
+function scrollToPage(page: number): void {
+  scrollToPosition(page, 0, 'smooth');
+}
+
+// Margin above the target so the line isn't glued to the pane's top edge.
+const SCROLL_MARGIN_PX = 40;
+
+// `y` is the vertical offset within the page in typst points, mapped onto the
+// rendered page height. SVG and canvas previews render one element per page; the
+// HTML preview is a single iframe with no per-page element, so this no-ops there.
+function scrollToPosition(page: number, y: number, behavior: ScrollBehavior): void {
+  const pageEls = previewEl.querySelectorAll<HTMLElement>(':scope > svg, :scope > canvas');
+  const el = pageEls[page];
+  if (!el) return;
+
+  const info = pages[page];
+  const fraction = info && info.height > 0 ? y / info.height : 0;
+  const pageTop =
+    el.getBoundingClientRect().top - previewEl.getBoundingClientRect().top + previewEl.scrollTop;
+  const target = pageTop + fraction * el.clientHeight - SCROLL_MARGIN_PX;
+
+  previewEl.scrollTo({ top: Math.max(target, 0), behavior });
+}
+
+// Debounced so rapid typing / caret moves coalesce into a single jump lookup.
+let followTimer = 0;
+function scheduleFollow(): void {
+  clearTimeout(followTimer);
+  followTimer = window.setTimeout(() => void followCursorToPreview(), 150);
+}
+
+async function followCursorToPreview(): Promise<void> {
+  const cursor = view.state.selection.main.head;
+  const jumps = await core.jumpFromCursor(PATH, cursor);
+  const pos = jumps.find((jump) => jump.kind === 'position');
+  // Instant (not smooth) so it keeps up while typing instead of lagging behind.
+  if (pos?.kind === 'position') scrollToPosition(pos.page, pos.y, 'auto');
+}
+
+//  export
 
 function syncExportControls(): void {
   const format = exportFormatSelect.value as ExportFormat;

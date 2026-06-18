@@ -44,7 +44,6 @@ message pointing at this section. See [SharedArrayBuffer requirements](https://d
 
 ## Known gaps
 
-- **Outline** notifications are stubbed.
 - **archive()** is stubbed.
 - **Font index** decoder only accepts JSON.
 - **Spellcheck** is delegated to JS; no built-in hunspell.

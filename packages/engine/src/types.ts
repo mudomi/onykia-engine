@@ -65,10 +65,17 @@ export interface DiagnosticsNotification {
   diagnostics: Diagnostic[];
 }
 
+export interface OutlinePosition {
+  /** 0-based, so it indexes directly into the `pages` notification array. */
+  page: number;
+  x: number;
+  y: number;
+}
+
 export interface OutlineEntry {
   level: number;
   title: string;
-  position: unknown;
+  position: OutlinePosition;
   children?: OutlineEntry[];
 }
 
