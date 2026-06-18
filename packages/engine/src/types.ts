@@ -1,5 +1,30 @@
 export type ExportTarget = 'pdf' | 'svg' | 'png' | 'html' | 'none';
 
+export type PdfStandard =
+  | '1.4'
+  | '1.5'
+  | '1.6'
+  | '1.7'
+  | '2.0'
+  | 'a-1b'
+  | 'a-1a'
+  | 'a-2b'
+  | 'a-2u'
+  | 'a-2a'
+  | 'a-3b'
+  | 'a-3u'
+  | 'a-3a'
+  | 'a-4'
+  | 'a-4f'
+  | 'a-4e'
+  | 'ua-1';
+
+export type ExportArgs =
+  | { format: 'pdf'; standards?: PdfStandard[] }
+  | { format: 'svg'; index: number }
+  | { format: 'png'; index: number; ppi?: number }
+  | { format: 'html' };
+
 export interface WasmFactory {
   wasmUrl: string;
   worker(): Worker;

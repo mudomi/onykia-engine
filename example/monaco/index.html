@@ -8,6 +8,9 @@
       html, body, #app { margin: 0; height: 100%; }
       #app { display: grid; grid-template-columns: auto 1fr 1fr; grid-template-rows: auto 1fr; height: 100vh; }
       #toolbar { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; padding: 6px 12px; border-bottom: 1px solid #ddd; background: #f5f5f5; font: 14px system-ui, sans-serif; }
+      #export-standards { position: relative; }
+      .standards-panel { position: absolute; z-index: 1; display: grid; padding: 6px 8px; background: #fff; border: 1px solid #ccc; }
+      .standards-panel strong { margin-top: 6px; color: #888; }
       #editor, #preview, #outline { overflow: auto; }
       #editor, #outline { border-right: 1px solid #ddd; }
       #outline { width: 220px; padding: 8px; font: 13px system-ui, sans-serif; }
@@ -22,7 +25,35 @@
   </head>
   <body>
     <div id="app">
-      <div id="toolbar"></div>
+      <div id="toolbar">
+        <label>Export PDF</label>
+        <details id="export-standards">
+          <summary>Standards</summary>
+          <div class="standards-panel">
+            <strong>Version</strong>
+            <label><input type="checkbox" value="1.4" /> PDF 1.4</label>
+            <label><input type="checkbox" value="1.5" /> PDF 1.5</label>
+            <label><input type="checkbox" value="1.6" /> PDF 1.6</label>
+            <label><input type="checkbox" value="1.7" /> PDF 1.7</label>
+            <label><input type="checkbox" value="2.0" /> PDF 2.0</label>
+            <strong>PDF/A</strong>
+            <label><input type="checkbox" value="a-1b" /> PDF/A-1b</label>
+            <label><input type="checkbox" value="a-1a" /> PDF/A-1a</label>
+            <label><input type="checkbox" value="a-2b" /> PDF/A-2b</label>
+            <label><input type="checkbox" value="a-2u" /> PDF/A-2u</label>
+            <label><input type="checkbox" value="a-2a" /> PDF/A-2a</label>
+            <label><input type="checkbox" value="a-3b" /> PDF/A-3b</label>
+            <label><input type="checkbox" value="a-3u" /> PDF/A-3u</label>
+            <label><input type="checkbox" value="a-3a" /> PDF/A-3a</label>
+            <label><input type="checkbox" value="a-4" /> PDF/A-4</label>
+            <label><input type="checkbox" value="a-4f" /> PDF/A-4f</label>
+            <label><input type="checkbox" value="a-4e" /> PDF/A-4e</label>
+            <strong>PDF/UA</strong>
+            <label><input type="checkbox" value="ua-1" /> PDF/UA-1</label>
+          </div>
+        </details>
+        <button id="export-button">Download</button>
+      </div>
       <nav id="outline" aria-label="Document outline"></nav>
       <div id="editor"></div>
       <div id="preview"></div>
