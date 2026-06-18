@@ -29,6 +29,7 @@ export type {
 } from './awareness.js';
 export { dropFileExtension } from './dragdrop.js';
 export type { DropResolver, DroppedFile, DropFileOptions } from './dragdrop.js';
+export { foldingExtension } from './folding.js';
 
 import type { Core } from '@mudomi/onykia-engine';
 import type { Extension } from '@codemirror/state';
@@ -36,6 +37,7 @@ import type { Extension } from '@codemirror/state';
 import { autocompleteExtension } from './autocomplete.js';
 import { definitionExtension, type DefinitionHandlers } from './definition.js';
 import { forwardEdits } from './edits.js';
+import { foldingExtension } from './folding.js';
 import { highlightExtension, type HighlightExtensionOptions } from './highlighting.js';
 import { dollarExtension } from './math.js';
 import { tooltipExtension } from './tooltip.js';
@@ -51,6 +53,8 @@ export interface TypstExtensionsOptions {
   autocomplete?: boolean;
   /** Enable `$$` --> `$ $` math auto-pair. Default: true. */
   dollarAutoPair?: boolean;
+  /** Provide fold ranges (blocks, heading sections). Default: true. */
+  folding?: boolean;
   /** Highlight styling overrides. */
   highlight?: HighlightExtensionOptions | false;
 }
@@ -83,6 +87,7 @@ export async function typstExtensions(
     extensions.push(definitionExtension(core, path, handlers));
   }
   if (options.dollarAutoPair !== false) extensions.push(dollarExtension());
+  if (options.folding !== false) extensions.push(foldingExtension(core, path));
 
   return { extensions };
 }
