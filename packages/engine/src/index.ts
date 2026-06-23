@@ -4,6 +4,8 @@ export type { CoreOptions } from './core.js';
 export type { WasmFactoryOptions } from './wasm.js';
 export type {
   ExportTarget,
+  PdfStandard,
+  ExportArgs,
   WasmFactory,
   HandlerOptions,
   AskName,

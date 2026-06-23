@@ -4,6 +4,7 @@ import type {
   AskHandler,
   AutocompleteResult,
   DefinitionResult,
+  ExportArgs,
   ExportResult,
   ExportTarget,
   FontStub,
@@ -186,7 +187,7 @@ export class Core {
     return this.handler.dispatch('jumpFromClick', args);
   }
 
-  export(args: Record<string, unknown> & { format: string }): Promise<ExportResult> {
+  export(args: ExportArgs): Promise<ExportResult> {
     return this.handler.dispatch('export', args);
   }
 

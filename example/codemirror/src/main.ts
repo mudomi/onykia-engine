@@ -4,11 +4,19 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { lintGutter } from '@codemirror/lint';
 import { foldGutter, foldKeymap } from '@codemirror/language';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
-import { renderToCanvas, type OutlineEntry, type PageInfo } from '@mudomi/onykia-engine';
+import {
+  renderToCanvas,
+  type OutlineEntry,
+  type PageInfo,
+  type PdfStandard,
+} from '@mudomi/onykia-engine';
 import { createEngine } from './engine.js';
 
 const PATH = '/main.typ';
-const INITIAL = `= Hello, Onykia x CodeMirror
+// A title is set so PDF/A and PDF/UA exports (which require one) succeed.
+const INITIAL = `#set document(title: "Onykia x CodeMirror", author: "Onykia")
+
+= Hello, Onykia x CodeMirror
 $ integral_0^1 x^2 dif x = 1/3 $
 
 #pagebreak()
@@ -28,6 +36,7 @@ const followCursor = byId<HTMLInputElement>('follow-cursor');
 const exportFormatSelect = byId<HTMLSelectElement>('export-format');
 const exportPageSelect = byId<HTMLSelectElement>('export-page');
 const exportPageLabel = byId('export-page-label');
+const exportStandards = byId('export-standards');
 const exportButton = byId<HTMLButtonElement>('export-button');
 
 const core = await createEngine();
@@ -193,13 +202,19 @@ async function followCursorToPreview(): Promise<void> {
 
 function syncExportControls(): void {
   const format = exportFormatSelect.value as ExportFormat;
-  const needsPage = format !== 'pdf';
+  const isPdf = format === 'pdf';
 
-  exportPageSelect.hidden = !needsPage;
-  exportPageLabel.hidden = !needsPage;
+  exportPageSelect.hidden = isPdf;
+  exportPageLabel.hidden = isPdf;
+  exportStandards.hidden = !isPdf;
   exportButton.disabled = pages.length === 0;
 
   rebuildPageOptions();
+}
+
+function selectedStandards(): PdfStandard[] {
+  const boxes = exportStandards.querySelectorAll<HTMLInputElement>('input:checked');
+  return Array.from(boxes, (box) => box.value as PdfStandard);
 }
 
 function rebuildPageOptions(): void {
@@ -221,10 +236,18 @@ async function downloadExport(): Promise<void> {
 
   const format = exportFormatSelect.value as ExportFormat;
   const args = format === 'pdf'
-    ? { format: 'pdf' as const }
+    ? { format: 'pdf' as const, standards: selectedStandards() }
     : { format, index: Number(exportPageSelect.value) - 1 };
 
-  const res = await core.export(args);
+  // Incompatible standards (e.g. two PDF/A profiles) are rejected by the engine.
+  let res;
+  try {
+    res = await core.export(args);
+  } catch (err) {
+    alert(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+
   const suffix = format === 'pdf' ? '' : `-p${Number(exportPageSelect.value)}`;
   triggerDownload(res.data, res.mime, `onykia${suffix}.${format}`);
 }
