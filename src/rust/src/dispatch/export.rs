@@ -18,7 +18,11 @@ fn format_errors(prefix: &str, errors: EcoVec<SourceDiagnostic>) -> String {
     let detail = errors
         .iter()
         .map(|d| {
-            let hints = d.hints.iter().map(|h| format!(" (hint: {})", h.v)).collect::<String>();
+            let hints = d
+                .hints
+                .iter()
+                .map(|h| format!(" (hint: {})", h.v))
+                .collect::<String>();
             format!("{}{hints}", d.message)
         })
         .collect::<Vec<_>>()
@@ -79,8 +83,7 @@ fn page_at(doc: &PagedDocument, index: usize) -> Result<&Page, String> {
 }
 
 fn export_pdf(doc: &PagedDocument, standards: &[PdfStandard]) -> Result<ExportResponse, String> {
-    let standards =
-        PdfStandards::new(standards).map_err(|e| format!("pdf: {}", e.message()))?;
+    let standards = PdfStandards::new(standards).map_err(|e| format!("pdf: {}", e.message()))?;
     let options = typst_pdf::PdfOptions {
         standards,
         ..Default::default()
