@@ -2,6 +2,7 @@ import { EditorView, lineNumbers, keymap } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { lintGutter } from '@codemirror/lint';
+import { foldGutter, foldKeymap } from '@codemirror/language';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
 import {
   renderToCanvas,
@@ -50,7 +51,8 @@ const view = new EditorView({
       lineNumbers(),
       history(),
       lintGutter(),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
+      foldGutter(),
+      keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap]),
       // Sync the preview to the caret when "Follow cursor" is on.
       EditorView.updateListener.of((update) => {
         if (followCursor.checked && (update.selectionSet || update.docChanged)) {
