@@ -1,18 +1,43 @@
 //! Export / render / archive handlers.
 
+use ecow::EcoVec;
 use serde::{Deserialize, Serialize};
+use typst::diag::SourceDiagnostic;
 use typst::utils::Scalar;
 use typst_html::HtmlDocument;
 use typst_layout::{Page, PagedDocument};
+use typst_pdf::{PdfStandard, PdfStandards};
 use wasm_bindgen::prelude::*;
 
 use crate::protocol::{from_js, to_js};
 use crate::state::State;
 
+// Joins each diagnostic's message with its hints so callers see the actual
+// reason (e.g. a PDF/A font-embedding requirement) rather than just a count.
+fn format_errors(prefix: &str, errors: EcoVec<SourceDiagnostic>) -> String {
+    let detail = errors
+        .iter()
+        .map(|d| {
+            let hints = d
+                .hints
+                .iter()
+                .map(|h| format!(" (hint: {})", h.v))
+                .collect::<String>();
+            format!("{}{hints}", d.message)
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+
+    format!("{prefix}: {detail}")
+}
+
 #[derive(Deserialize)]
 #[serde(tag = "format", rename_all = "lowercase")]
 pub enum ExportArgs {
-    Pdf,
+    Pdf {
+        #[serde(default)]
+        standards: Vec<PdfStandard>,
+    },
     Svg {
         index: usize,
     },
@@ -35,7 +60,7 @@ pub fn export(state: &mut State, args: JsValue) -> Result<JsValue, String> {
     let args: ExportArgs = from_js(args)?;
 
     let response = match args {
-        ExportArgs::Pdf => export_pdf(require_paged(state)?)?,
+        ExportArgs::Pdf { standards } => export_pdf(require_paged(state)?, &standards)?,
         ExportArgs::Svg { index } => export_svg(page_at(require_paged(state)?, index)?),
         ExportArgs::Png { index, ppi } => export_png(page_at(require_paged(state)?, index)?, ppi)?,
         ExportArgs::Html => export_html(state)?,
@@ -57,10 +82,13 @@ fn page_at(doc: &PagedDocument, index: usize) -> Result<&Page, String> {
         .ok_or_else(|| "page out of range".to_string())
 }
 
-fn export_pdf(doc: &PagedDocument) -> Result<ExportResponse, String> {
-    let options = typst_pdf::PdfOptions::default();
-    let bytes =
-        typst_pdf::pdf(doc, &options).map_err(|errs| format!("pdf: {} error(s)", errs.len()))?;
+fn export_pdf(doc: &PagedDocument, standards: &[PdfStandard]) -> Result<ExportResponse, String> {
+    let standards = PdfStandards::new(standards).map_err(|e| format!("pdf: {}", e.message()))?;
+    let options = typst_pdf::PdfOptions {
+        standards,
+        ..Default::default()
+    };
+    let bytes = typst_pdf::pdf(doc, &options).map_err(|errs| format_errors("pdf", errs))?;
     Ok(ExportResponse {
         data: bytes,
         mime: "application/pdf",
@@ -104,9 +132,9 @@ fn export_png(page: &Page, ppi: Option<f32>) -> Result<ExportResponse, String> {
 fn export_html(state: &State) -> Result<ExportResponse, String> {
     let doc = typst::compile::<HtmlDocument>(&state.world)
         .output
-        .map_err(|errs| format!("html: {} error(s)", errs.len()))?;
+        .map_err(|errs| format_errors("html", errs))?;
     let html = typst_html::html(&doc, &typst_html::HtmlOptions::default())
-        .map_err(|errs| format!("html: {} error(s)", errs.len()))?;
+        .map_err(|errs| format_errors("html", errs))?;
     Ok(ExportResponse {
         data: html.into_bytes(),
         mime: "text/html",
