@@ -20,6 +20,8 @@ const editorEl = document.getElementById('editor')!;
 const previewEl = document.getElementById('preview')!;
 const outlineEl = document.getElementById('outline')!;
 const exportStandards = document.getElementById('export-standards')!;
+const exportFrom = document.getElementById('export-from') as HTMLInputElement;
+const exportTo = document.getElementById('export-to') as HTMLInputElement;
 const exportButton = document.getElementById('export-button')!;
 
 const model = monaco.editor.createModel(INITIAL, 'plaintext');
@@ -53,10 +55,18 @@ async function downloadPdf(): Promise<void> {
   const boxes = exportStandards.querySelectorAll<HTMLInputElement>('input:checked');
   const standards = Array.from(boxes, (box) => box.value as PdfStandard);
 
+  // From/To are 1-based in the UI but 0-based in the API; a blank end is omitted
+  // so the engine fills in first/last, and blank/blank exports every page.
+  const selection: { from?: number; to?: number } = {};
+  const from = Number.parseInt(exportFrom.value, 10);
+  const to = Number.parseInt(exportTo.value, 10);
+  if (Number.isFinite(from)) selection.from = from - 1;
+  if (Number.isFinite(to)) selection.to = to - 1;
+
   // Incompatible standards (e.g. two PDF/A profiles) are rejected by the engine.
   let res;
   try {
-    res = await core.export({ format: 'pdf', standards });
+    res = await core.export({ format: 'pdf', standards, ...selection });
   } catch (err) {
     alert(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
     return;

@@ -42,14 +42,6 @@ Cross-Origin-Embedder-Policy: require-corp
 Without these headers `createWasmFactory()` throws synchronously with a
 message pointing at this section. See [SharedArrayBuffer requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer).
 
-## Known gaps
-
-- **archive()** is stubbed.
-- **Font index** decoder only accepts JSON.
-- **Spellcheck** is delegated to JS; no built-in hunspell.
-- **Monaco binding** supports only edits + diagnostics - no syntax highlight,
-  autocomplete, hover, or definition.
-
 ## More
 
 For contributions & release flow see [`CONTRIBUTING.md`](./CONTRIBUTING.md).

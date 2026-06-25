@@ -7,6 +7,7 @@ mod protocol;
 mod state;
 mod vfs;
 mod world;
+mod zip;
 
 use wasm_bindgen::prelude::*;
 

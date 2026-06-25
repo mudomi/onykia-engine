@@ -6,6 +6,7 @@ import { foldGutter, foldKeymap } from '@codemirror/language';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
 import {
   renderToCanvas,
+  type ExportArgs,
   type OutlineEntry,
   type PageInfo,
   type PdfStandard,
@@ -34,8 +35,8 @@ const outlineEl = byId('outline');
 const previewSelect = byId<HTMLSelectElement>('preview-format');
 const followCursor = byId<HTMLInputElement>('follow-cursor');
 const exportFormatSelect = byId<HTMLSelectElement>('export-format');
-const exportPageSelect = byId<HTMLSelectElement>('export-page');
-const exportPageLabel = byId('export-page-label');
+const exportFrom = byId<HTMLInputElement>('export-from');
+const exportTo = byId<HTMLInputElement>('export-to');
 const exportStandards = byId('export-standards');
 const exportButton = byId<HTMLButtonElement>('export-button');
 
@@ -200,16 +201,18 @@ async function followCursorToPreview(): Promise<void> {
 
 //  export
 
+// Page ranges apply to every format, so only the PDF standards panel is
+// format-specific.
 function syncExportControls(): void {
-  const format = exportFormatSelect.value as ExportFormat;
-  const isPdf = format === 'pdf';
-
-  exportPageSelect.hidden = isPdf;
-  exportPageLabel.hidden = isPdf;
-  exportStandards.hidden = !isPdf;
+  exportStandards.hidden = exportFormatSelect.value !== 'pdf';
   exportButton.disabled = pages.length === 0;
 
-  rebuildPageOptions();
+  for (const input of [exportFrom, exportTo]) {
+    input.max = String(pages.length);
+    input.disabled = pages.length === 0;
+    const n = Number.parseInt(input.value, 10);
+    if (Number.isFinite(n)) input.value = String(clamp(n, 1, pages.length));
+  }
 }
 
 function selectedStandards(): PdfStandard[] {
@@ -217,27 +220,36 @@ function selectedStandards(): PdfStandard[] {
   return Array.from(boxes, (box) => box.value as PdfStandard);
 }
 
-function rebuildPageOptions(): void {
-  const previous = Number(exportPageSelect.value) || 1;
-  const options = pages.map((_, i) => {
-    const opt = document.createElement('option');
-    opt.value = String(i + 1);
-    opt.textContent = `Page ${i + 1}`;
-    return opt;
-  });
-  exportPageSelect.replaceChildren(...options);
+// The inputs are 1-based; the API is 0-based. A blank end is omitted (engine
+// reads it as first/last), and blank/blank means the whole document.
+function pageSelection(): { from?: number; to?: number } {
+  const selection: { from?: number; to?: number } = {};
+  const from = pageInput(exportFrom);
+  const to = pageInput(exportTo);
+  if (from !== undefined) selection.from = from - 1;
+  if (to !== undefined) selection.to = to - 1;
+  return selection;
+}
 
-  const restored = Math.min(previous, pages.length) || 1;
-  exportPageSelect.value = String(restored);
+function pageInput(input: HTMLInputElement): number | undefined {
+  const n = Number.parseInt(input.value, 10);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 async function downloadExport(): Promise<void> {
   if (pages.length === 0) return;
 
+  const selection = pageSelection();
+  if (selection.from !== undefined && selection.to !== undefined && selection.from > selection.to) {
+    alert('"From" page must not be after "To" page.');
+    return;
+  }
+
   const format = exportFormatSelect.value as ExportFormat;
-  const args = format === 'pdf'
-    ? { format: 'pdf' as const, standards: selectedStandards() }
-    : { format, index: Number(exportPageSelect.value) - 1 };
+  const args: ExportArgs =
+    format === 'pdf' ? { format: 'pdf', standards: selectedStandards(), ...selection }
+    : format === 'png' ? { format: 'png', ...selection }
+    : { format: 'svg', ...selection };
 
   // Incompatible standards (e.g. two PDF/A profiles) are rejected by the engine.
   let res;
@@ -248,8 +260,21 @@ async function downloadExport(): Promise<void> {
     return;
   }
 
-  const suffix = format === 'pdf' ? '' : `-p${Number(exportPageSelect.value)}`;
-  triggerDownload(res.data, res.mime, `onykia${suffix}.${format}`);
+  // Multi-page SVG/PNG come back as a ZIP; trust the mime over the format.
+  const extension = res.mime === 'application/zip' ? 'zip' : format;
+  triggerDownload(res.data, res.mime, `onykia${pageSuffix()}.${extension}`);
+}
+
+function pageSuffix(): string {
+  const from = exportFrom.value.trim();
+  const to = exportTo.value.trim();
+  if (!from && !to) return '-all';
+  if (from && to) return from === to ? `-p${from}` : `-p${from}-${to}`;
+  return from ? `-p${from}-end` : `-p1-${to}`;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function triggerDownload(data: Uint8Array, mime: string, filename: string): void {
