@@ -12,6 +12,7 @@
       #toolbar .group { display: flex; gap: 6px; align-items: center; }
       #toolbar .spacer { flex: 1; }
       #toolbar [hidden] { display: none; }
+      #toolbar input[type="number"] { width: 4em; }
       #export-standards { position: relative; }
       .standards-panel { position: absolute; z-index: 1; display: grid; padding: 6px 8px; background: #fff; border: 1px solid #ccc; }
       .standards-panel strong { margin-top: 6px; color: #888; }
@@ -51,8 +52,10 @@
             <option value="svg">SVG</option>
             <option value="png">PNG</option>
           </select>
-          <label id="export-page-label" for="export-page" hidden>Page:</label>
-          <select id="export-page" hidden></select>
+          <label for="export-from">Pages:</label>
+          <input id="export-from" type="number" min="1" step="1" placeholder="first" aria-label="First page" />
+          <span aria-hidden="true">-</span>
+          <input id="export-to" type="number" min="1" step="1" placeholder="last" aria-label="Last page" />
           <details id="export-standards" hidden>
             <summary>Standards</summary>
             <div class="standards-panel">

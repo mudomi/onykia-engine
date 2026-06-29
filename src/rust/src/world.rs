@@ -39,6 +39,9 @@ pub struct OnykiaWorld {
 
     library: LazyHash<Library>,
     fonts: LazyHash<FontBook>,
+    /// Number of leading `font_slots` occupied by the built-in `typst-assets`
+    /// faces. Everything after this index was supplied by the host at runtime.
+    static_fonts: usize,
     /// `None` slots are stubs whose binary has not been delivered yet.
     font_slots: Vec<Option<Font>>,
     /// Parallel to `font_slots`, used to rebuild the `FontBook` cheaply.
@@ -69,6 +72,7 @@ impl OnykiaWorld {
                     .build(),
             ),
             fonts: LazyHash::new(FontBook::new()),
+            static_fonts: 0,
             font_slots: Vec::new(),
             font_infos: Vec::new(),
             font_stubs: HashMap::new(),
@@ -80,7 +84,17 @@ impl OnykiaWorld {
         // via `typst-assets`. Hosts can still register additional fonts at
         // runtime via the `addFont` / `addFonts` dispatch calls.
         world.add_static_fonts(typst_assets::fonts());
+        world.static_fonts = world.font_slots.len();
         world
+    }
+
+    /// Fonts the host registered at runtime (excludes the built-in
+    /// `typst-assets` faces and not-yet-delivered stub slots). Used by
+    /// `archive` to bundle only the fonts a fresh engine wouldn't already have.
+    pub fn user_fonts(&self) -> impl Iterator<Item = &Font> {
+        self.font_slots[self.static_fonts..]
+            .iter()
+            .filter_map(Option::as_ref)
     }
 
     // Avoids the heap copy that add_font performs.

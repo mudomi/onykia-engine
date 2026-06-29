@@ -122,6 +122,18 @@ impl Vfs {
         self.file_ids.keys().copied().collect()
     }
 
+    /// Every project file as `(absolute path, file)`. Used by `archive` to
+    /// bundle the source tree.
+    pub fn project_files(&self) -> impl Iterator<Item = (&str, &File)> {
+        self.files.iter().map(|(path, file)| (path.as_str(), file))
+    }
+
+    /// Every cached package file as `(id, entry)`. The `FileId` carries the
+    /// `PackageSpec` (via `id.root()`) and in-package path (`id.vpath()`).
+    pub fn package_files(&self) -> impl Iterator<Item = (FileId, &PackageEntry)> {
+        self.packages.iter().map(|(id, entry)| (*id, entry))
+    }
+
     pub fn find_by_id(&self, id: FileId) -> Option<(&str, &File)> {
         if matches!(id.root(), VirtualRoot::Package(_)) {
             return None;

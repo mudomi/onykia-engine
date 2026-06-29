@@ -19,10 +19,22 @@ export type PdfStandard =
   | 'a-4e'
   | 'ua-1';
 
+/**
+ * Page selection for every page-based format. Provide `index` for a single page,
+ * or an inclusive 0-based `from`/`to` range (each defaulting to first/last); omit
+ * all three to export every page. Out-of-range pages are skipped, not rejected.
+ *
+ * PDF always yields one (multi-page) file. svg/png return the raw image for a
+ * single page, or a ZIP of `page-N.<ext>` files (`mime: 'application/zip'`).
+ */
+export type PageSelection =
+  | { index?: never; from?: number; to?: number }
+  | { index: number; from?: never; to?: never };
+
 export type ExportArgs =
-  | { format: 'pdf'; standards?: PdfStandard[] }
-  | { format: 'svg'; index: number }
-  | { format: 'png'; index: number; ppi?: number }
+  | ({ format: 'pdf'; standards?: PdfStandard[] } & PageSelection)
+  | ({ format: 'svg' } & PageSelection)
+  | ({ format: 'png'; ppi?: number } & PageSelection)
   | { format: 'html' };
 
 export interface WasmFactory {
@@ -171,4 +183,17 @@ export interface RenderResult {
 export interface ExportResult {
   data: Uint8Array;
   mime: string;
+}
+
+/**
+ * Options for `archive()`, which bundles the project's VFS files into a ZIP
+ * (`mime: 'application/zip'`). Both flags default to `false`. Setting either
+ * nests the project files under `project/` with extras in sibling folders;
+ * otherwise the project files sit at the archive root.
+ */
+export interface ArchiveOptions {
+  /** Include host-supplied fonts under `fonts/` (built-in faces are excluded). */
+  fonts?: boolean;
+  /** Include fetched typst packages under `packages/<namespace>/<name>/<version>/`. */
+  packages?: boolean;
 }

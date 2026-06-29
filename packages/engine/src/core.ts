@@ -1,5 +1,6 @@
 import { Handler } from './handler.js';
 import type {
+  ArchiveOptions,
   AskArgs,
   AskHandler,
   AutocompleteResult,
@@ -195,8 +196,12 @@ export class Core {
     return this.handler.dispatch('render', { index, zoom });
   }
 
-  archive(format: 'zip' = 'zip'): Promise<{ data: Uint8Array; mime: string }> {
-    return this.handler.dispatch('archive', { format });
+  // Bundles the project's VFS files into a ZIP.
+  archive(options: ArchiveOptions = {}): Promise<ExportResult> {
+    return this.handler.dispatch('archive', {
+      fonts: options.fonts ?? false,
+      packages: options.packages ?? false,
+    });
   }
 
   destroy(): void {

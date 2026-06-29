@@ -35,6 +35,7 @@ export type {
   TagsResult,
   RenderResult,
   ExportResult,
+  ArchiveOptions,
 } from './types.js';
 export * from './adapter.js';
 export { paint, renderToCanvas } from './canvas.js';

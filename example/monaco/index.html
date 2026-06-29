@@ -8,6 +8,7 @@
       html, body, #app { margin: 0; height: 100%; }
       #app { display: grid; grid-template-columns: auto 1fr 1fr; grid-template-rows: auto 1fr; height: 100vh; }
       #toolbar { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; padding: 6px 12px; border-bottom: 1px solid #ddd; background: #f5f5f5; font: 14px system-ui, sans-serif; }
+      #toolbar input[type="number"] { width: 4em; }
       #export-standards { position: relative; }
       .standards-panel { position: absolute; z-index: 1; display: grid; padding: 6px 8px; background: #fff; border: 1px solid #ccc; }
       .standards-panel strong { margin-top: 6px; color: #888; }
@@ -27,6 +28,10 @@
     <div id="app">
       <div id="toolbar">
         <label>Export PDF</label>
+        <label for="export-from">Pages:</label>
+        <input id="export-from" type="number" min="1" step="1" placeholder="first" aria-label="First page" />
+        <span aria-hidden="true">-</span>
+        <input id="export-to" type="number" min="1" step="1" placeholder="last" aria-label="Last page" />
         <details id="export-standards">
           <summary>Standards</summary>
           <div class="standards-panel">
