@@ -130,7 +130,7 @@ fn page_at(doc: &PagedDocument, index: usize) -> Result<&Page, String> {
 // The 0-based page indices a selection resolves to, mirroring typst's PDF filter.
 fn selected_pages(doc: &PagedDocument, ranges: &Option<PageRanges>) -> Vec<usize> {
     (0..doc.pages().len())
-        .filter(|&i| ranges.as_ref().map_or(true, |r| r.includes_page_index(i)))
+        .filter(|&i| ranges.as_ref().is_none_or(|r| r.includes_page_index(i)))
         .collect()
 }
 
