@@ -188,10 +188,12 @@ fn export_pdf(
     // ranges. Accessible standards mandate tagging, so that combination can't be
     // papered over - reject it with a clear message instead of typst's terse one.
     if page_ranges.is_some() && standards_require_tagging(standards) {
-        return Err("pdf: an accessible standard (PDF/UA-1 or PDF/A-*a) requires a fully \
+        return Err(
+            "pdf: an accessible standard (PDF/UA-1 or PDF/A-*a) requires a fully \
                     tagged document and can't be combined with a page range - export the \
                     whole document or choose a non-accessible standard"
-            .to_string());
+                .to_string(),
+        );
     }
     let tagged = page_ranges.is_none();
 
@@ -472,7 +474,10 @@ mod tests {
     fn accessible_standards_require_tagging() {
         assert!(standards_require_tagging(&[PdfStandard::Ua_1]));
         assert!(standards_require_tagging(&[PdfStandard::A_2a]));
-        assert!(standards_require_tagging(&[PdfStandard::A_2b, PdfStandard::A_3a]));
+        assert!(standards_require_tagging(&[
+            PdfStandard::A_2b,
+            PdfStandard::A_3a
+        ]));
 
         assert!(!standards_require_tagging(&[]));
         assert!(!standards_require_tagging(&[PdfStandard::A_2b]));
