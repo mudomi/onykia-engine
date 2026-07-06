@@ -1,3 +1,19 @@
+# [0.5.0](https://github.com/mudomi/onykia-engine/compare/v0.4.0...v0.5.0) (2026-07-06)
+
+
+### Bug Fixes
+
+* code folding in codemirror ([#41](https://github.com/mudomi/onykia-engine/issues/41)) ([77667d0](https://github.com/mudomi/onykia-engine/commit/77667d0f89ee9a14982bb37ef239d7df9c42a15c))
+* pass module_or_path to wasm init to avoid double-fetching the wasm ([#37](https://github.com/mudomi/onykia-engine/issues/37)) ([a545f03](https://github.com/mudomi/onykia-engine/commit/a545f03233ef1c0f09305d29ebcb0d898949deb2))
+
+
+### Features
+
+* add support for pdf standards ([#40](https://github.com/mudomi/onykia-engine/issues/40)) ([aa6c77e](https://github.com/mudomi/onykia-engine/commit/aa6c77efc5fad35478713045e58e95e6422bd54b))
+* implement archive function and image zip ([#42](https://github.com/mudomi/onykia-engine/issues/42)) ([8755e86](https://github.com/mudomi/onykia-engine/commit/8755e86432e850ac97ae73db4ff4c75857e15b27))
+* implement document outline with nested headings and page positions ([#39](https://github.com/mudomi/onykia-engine/issues/39)) ([672fb7c](https://github.com/mudomi/onykia-engine/commit/672fb7ce9628342a01cdb15d03358812aa90e17c))
+* upgrade typst to 0.15 ([#38](https://github.com/mudomi/onykia-engine/issues/38)) ([906e63a](https://github.com/mudomi/onykia-engine/commit/906e63af57c251bed67b82668023e6923defd88f))
+
 # [0.4.0](https://github.com/mudomi/onykia-engine/compare/v0.3.0...v0.4.0) (2026-05-24)
 
 
