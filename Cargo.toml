@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["src/rust"]
+members = ["src/rust", "tools/export-fonts"]
 
 [profile.release]
-opt-level = "z"
+opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"

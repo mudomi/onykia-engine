@@ -65,7 +65,7 @@ jobs:
 
       - name: Clippy
         env:
-          RUSTFLAGS: "-C target-feature=+atomics,+bulk-memory -C link-arg=--shared-memory -C link-arg=--max-memory=1073741824 -C link-arg=--import-memory -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base"
+          RUSTFLAGS: "-C target-feature=+atomics,+bulk-memory,+simd128 -C link-arg=--shared-memory -C link-arg=--max-memory=4294967296 -C link-arg=--import-memory -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base"
         run: |
           cargo +nightly clippy --target wasm32-unknown-unknown \
             -Z build-std=panic_abort,std \
@@ -77,6 +77,13 @@ jobs:
         run: |
           VERSION=$(awk '/^name = "wasm-bindgen"$/{getline; gsub(/version = |"/, "", $0); print; exit}' Cargo.lock)
           cargo install wasm-bindgen-cli --version "$VERSION" --locked
+
+      # The build script runs wasm-opt from node_modules.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
 
       - name: Build WASM
         run: bash scripts/build-wasm.sh
