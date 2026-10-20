@@ -1,5 +1,7 @@
 export { Core } from './core.js';
 export { createWasmFactory, assertCrossOriginIsolated } from './wasm.js';
+export { bundledFonts } from './fonts.js';
+export type { BundledFonts } from './fonts.js';
 export type { CoreOptions } from './core.js';
 export type { WasmFactoryOptions } from './wasm.js';
 export type {

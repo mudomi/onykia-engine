@@ -1,5 +1,6 @@
 import {
   Core,
+  bundledFonts,
   createWasmFactory,
   indexedDbCache,
   withCache,
@@ -20,10 +21,13 @@ export async function createEngine(): Promise<Core> {
     (namespace, name, version) => `pkg:${namespace}/${name}-${version}`,
   );
 
+  const fonts = await bundledFonts('/assets/fonts/');
   const core = new Core({
     wasm,
     package: fetchPackage,
+    font: withCache(fonts.load, cache, key => `font:${key}`),
   });
+  await core.addFontStubs(fonts.stubs);
 
   // Forward the public preview index so autocomplete and version-resolution
   // see what packages exist. Failure is non-fatal - imports still resolve via

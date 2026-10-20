@@ -86,6 +86,10 @@ find "$OUT/snippets" -name workerHelpers.js -exec \
   sed -i "s|import('../../..')|import('../../../onykia_engine.js')|g" {} +
 
 cp "$WORKER_SHIM" "$OUT"/onykia_worker.js
+
+# Default fonts live next to the wasm and are fetched on demand (see
+# `bundledFonts()` in packages/engine/src/fonts.ts).
+cargo run -q -p export-fonts -- "$OUT"/fonts
 cp -r "$OUT"/. "$EXAMPLE"/
 
 echo "Built $OUT/onykia_engine.wasm"

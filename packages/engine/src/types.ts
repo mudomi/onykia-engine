@@ -82,6 +82,8 @@ export interface FontStub {
   weight?: number;
   /** OpenType-style stretch number 1..=9 (5 = normal). */
   stretch?: number;
+  /** Part of typst's own default set; `archive` skips it since every typst install has it. */
+  bundled?: boolean;
 }
 
 export type NotifyName = 'status' | 'diagnostics' | 'outline' | 'pages';

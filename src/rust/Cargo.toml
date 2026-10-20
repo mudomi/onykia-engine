@@ -13,7 +13,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # Typst compiler pieces. Pinned to 0.15 to match the target language level.
 typst = "0.15"
-typst-assets = { version = "0.15", features = ["fonts"] }
 typst-syntax = "0.15"
 typst-layout = "0.15"
 typst-ide = "0.15"
@@ -56,6 +55,11 @@ rayon = "1"
 # on wasm32-unknown-unknown.
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 tar = { version = "0.4", default-features = false }
+
+# The default font set is shipped as separate files by tools/export-fonts,
+# not linked into the wasm. Tests still use the embedded copies as fixtures.
+[dev-dependencies]
+typst-assets = { version = "0.15", features = ["fonts"] }
 
 [features]
 default = ["panic-hook"]

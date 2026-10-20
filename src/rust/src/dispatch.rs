@@ -193,6 +193,9 @@ struct FontStubArg {
     /// OpenType-style stretch number 1..=9 (5 = normal).
     #[serde(default)]
     stretch: Option<u16>,
+    /// Part of typst's default font set; excluded from `archive`.
+    #[serde(default)]
+    bundled: bool,
 }
 
 #[derive(Deserialize)]
@@ -223,6 +226,7 @@ fn handle_add_font_stubs(state: &mut State, args: JsValue) -> Result<(), String>
                 style,
                 weight: s.weight.map(FontWeight::from_number),
                 stretch: s.stretch.map(FontStretch::from_number),
+                bundled: s.bundled,
             })
         })
         .collect::<Result<Vec<_>, _>>()?;

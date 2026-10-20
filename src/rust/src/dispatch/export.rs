@@ -406,6 +406,7 @@ fn unique_name(stem: &str, extension: &str, used: &mut HashSet<String>) -> Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::world::FontStub;
     use std::str::FromStr;
     use typst::syntax::package::PackageSpec;
 
@@ -434,18 +435,28 @@ mod tests {
     }
 
     #[test]
-    fn archive_with_extras_namespaces_and_excludes_builtin_fonts() {
+    fn archive_with_extras_namespaces_and_excludes_bundled_fonts() {
         let mut world = OnykiaWorld::new();
         world
             .vfs
             .create("/main.typ".into(), "text/x-typst".into(), b"= Hi".to_vec());
 
-        // A real bundled face stands in for a host-uploaded font.
-        let face = typst_assets::fonts()
-            .next()
-            .expect("bundled fonts present")
-            .to_vec();
-        world.add_font(face);
+        // One default face delivered through a `bundled` stub, one uploaded.
+        let mut faces = typst_assets::fonts();
+        let bundled = faces.next().expect("bundled fonts present").to_vec();
+        let uploaded = faces.next().expect("bundled fonts present").to_vec();
+        world.add_font_stubs(vec![FontStub {
+            family: "Libertinus Serif".into(),
+            key: "libertinus-serif-400.otf".into(),
+            style: None,
+            weight: None,
+            stretch: None,
+            bundled: true,
+        }]);
+        world
+            .install_font(0, bundled)
+            .expect("stub slot 0 accepts the face");
+        world.add_font(uploaded);
 
         let spec = PackageSpec::from_str("@preview/example:0.1.0").unwrap();
         world
@@ -464,8 +475,8 @@ mod tests {
         assert!(names.contains("project/main.typ"));
         assert!(names.contains("packages/preview/example/0.1.0/lib.typ"));
 
-        // Only the uploaded font is emitted; the bundled typst-assets faces,
-        // which precede it in the slot list, are excluded.
+        // Only the uploaded font is emitted; the delivered bundled stub is
+        // excluded.
         let font_files = names.iter().filter(|n| n.starts_with("fonts/")).count();
         assert_eq!(font_files, 1);
     }
