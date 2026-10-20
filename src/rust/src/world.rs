@@ -192,6 +192,8 @@ impl OnykiaWorld {
 
     // Empty bytes clear the namespace; JS sends that for forbidden private scopes.
     pub fn set_package_index(&mut self, namespace: EcoString, data: Vec<u8>) {
+        // A new index is the host's signal that packages are reachable again.
+        self.failed_packages.clear();
         if data.is_empty() {
             self.package_indices.remove(&namespace);
         } else {
@@ -245,9 +247,10 @@ impl OnykiaWorld {
         }
         // First time we see this spec during the current compile - record it
         // so dispatch::compile can fire a fetch and retry.
-        if let Ok(mut pending) = self.pending_packages.lock() {
-            pending.insert(spec.clone());
-        }
+        self.pending_packages
+            .lock()
+            .expect("pending_packages mutex poisoned")
+            .insert(spec.clone());
         let _ = id;
         PackageStatus::Pending
     }

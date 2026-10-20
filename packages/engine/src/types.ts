@@ -94,7 +94,6 @@ export interface Diagnostic {
   range?: Range;
   path?: string;
   package?: string;
-  id?: string;
   hints?: string[];
 }
 

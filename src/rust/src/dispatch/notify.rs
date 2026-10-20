@@ -60,8 +60,6 @@ pub struct Diagnostic {
     pub path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub package: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub hints: Vec<String>,
 }

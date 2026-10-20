@@ -36,6 +36,10 @@ pub fn run(state: &mut State) {
     let result = typst::compile::<PagedDocument>(&state.world);
     let warnings = result.warnings;
 
+    // Drop memoized entries unused for the last 10 compiles, like typst-cli;
+    // otherwise the cache grows until the worker hits the memory ceiling.
+    comemo::evict(10);
+
     if dispatch_pending_fetches(state) {
         // We've issued (or are still waiting on) fetches; results from the
         // current pass are stale - defer emit until the retry compile runs.
@@ -198,7 +202,6 @@ fn diagnostics_notif(state: &State, diags: &EcoVec<SourceDiagnostic>) -> Diagnos
             range,
             path,
             package,
-            id: None,
             hints: diag.hints.iter().map(|h| h.v.to_string()).collect(),
         });
     }

@@ -257,38 +257,15 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
 name = "comemo"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df6916408a724339aa77b18214233355f3eb04c42eb895e5f8909215bd8a7a91"
-dependencies = [
- "comemo-macros 0.4.0",
- "once_cell",
- "parking_lot",
- "siphasher",
-]
-
-[[package]]
-name = "comemo"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c963350b2b08aa4b725d7802593245380ab53dacfedcaa971385fc33306c0d4"
 dependencies = [
- "comemo-macros 0.5.1",
+ "comemo-macros",
  "parking_lot",
  "rustc-hash",
  "siphasher",
  "slab",
-]
-
-[[package]]
-name = "comemo-macros"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8936e42f9b4f5bdfaf23700609ac1f11cb03ad4c1ec128a4ee4fd0903e228db"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -462,6 +439,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1a05365e3b1c6d1650318537c7460c6923f1abdd272ad6842baa2b509957a06"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "export-fonts"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "typst-assets",
+ "typst-library",
 ]
 
 [[package]]
@@ -1096,7 +1083,7 @@ checksum = "27da593198b20eeba65caeb73c2bbeec3e53ab08fa549898312ce81c4fce5e33"
 dependencies = [
  "base64",
  "bumpalo",
- "comemo 0.5.1",
+ "comemo",
  "flate2",
  "float-cmp",
  "gif",
@@ -1299,7 +1286,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 name = "onykia_core"
 version = "0.1.0"
 dependencies = [
- "comemo 0.4.0",
+ "comemo",
  "console_error_panic_hook",
  "ecow",
  "flate2",
@@ -1326,6 +1313,7 @@ dependencies = [
  "typst-utils",
  "wasm-bindgen",
  "wasm-bindgen-rayon",
+ "web-sys",
 ]
 
 [[package]]
@@ -2298,7 +2286,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c8bf2a5a9d58cc542764a88dd43c8a679b683db4ae23e36267219339ab36b01"
 dependencies = [
  "arrayvec",
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "rustc-hash",
  "typst-eval",
@@ -2327,7 +2315,7 @@ version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d064876305073ab75d5af039ae5e8dcb32c4cac4aa9f43d0f5aae347baef7c3"
 dependencies = [
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "indexmap",
  "rustc-hash",
@@ -2349,7 +2337,7 @@ checksum = "d442f92bae44087735efc8b83508b259c573bbccf027e098ac68c8f4ca879f76"
 dependencies = [
  "az",
  "bumpalo",
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "palette",
  "rustc-hash",
@@ -2370,7 +2358,7 @@ version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc438f225257f69351d06ec36a98e4a199f8206032edcabd46f5a2a7d04df2b1"
 dependencies = [
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "indexmap",
  "rustc-hash",
@@ -2392,7 +2380,7 @@ dependencies = [
  "az",
  "bumpalo",
  "codex",
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "either",
  "hypher",
@@ -2431,7 +2419,7 @@ dependencies = [
  "bumpalo",
  "ciborium",
  "codex",
- "comemo 0.5.1",
+ "comemo",
  "csv",
  "ecow",
  "either",
@@ -2507,7 +2495,7 @@ dependencies = [
  "az",
  "bytemuck",
  "codex",
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "flate2",
  "image",
@@ -2535,7 +2523,7 @@ checksum = "917e09614771258b13409b9a8d4f3915b2a2f7f28ca987701695f82fc6a7c0b9"
 dependencies = [
  "arrayvec",
  "bumpalo",
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "regex",
  "typst-html",
@@ -2553,7 +2541,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "040ab6e56e91099963ef69dd9f0d284adda66c066b742f1866a20b8295ebb2e3"
 dependencies = [
  "bytemuck",
- "comemo 0.5.1",
+ "comemo",
  "hayro",
  "image",
  "libm",
@@ -2576,7 +2564,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "878b6e1293c2bea77a8be50670d1cbca4e676af96480313a105cba539da51d1c"
 dependencies = [
  "base64",
- "comemo 0.5.1",
+ "comemo",
  "ecow",
  "flate2",
  "hayro",
