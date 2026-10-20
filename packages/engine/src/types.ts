@@ -45,12 +45,20 @@ export interface WasmFactory {
 export interface HandlerOptions {
   /** Initial shared-memory pages (64 KB each). Default: 512 (32 MB). */
   initMemory?: number;
-  /** Maximum shared-memory pages (64 KB each). Default: 16384 (1 GB) - matches the WASM `--max-memory` link flag. */
+  /**
+   * Requested maximum shared-memory pages (64 KB each). Default: 65536 (4 GB, the wasm32 limit).
+   * Halved until the browser accepts the reservation, so the effective ceiling may be lower.
+   */
   maxMemory?: number;
   /** Reject outstanding promises when the handler is destroyed. Default: true. */
   rejectOnDestruction?: boolean;
   /** rayon thread-pool size. Default: `min(hardwareConcurrency, 16)`. Floored, clamped to `[1, 16]`. */
   numThreads?: number;
+  /**
+   * How long a `package` / `font` loader may take before the fetch is reported as failed
+   * and the compile proceeds without it. Default: 60000. `Infinity` disables the timeout.
+   */
+  fetchTimeoutMs?: number;
 }
 
 export type AskName = 'package' | 'font';

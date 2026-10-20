@@ -2,8 +2,8 @@ import type { WasmFactory } from './types.js';
 
 /** Initial shared-memory pages (64 KB each). 512 -> 32 MB. */
 export const DEFAULT_INIT_MEMORY_PAGES = 512;
-/** Maximum shared-memory pages. 16384 -> 1 GB. Matches `--max-memory` in `scripts/build-wasm.sh`. */
-export const DEFAULT_MAX_MEMORY_PAGES = 16_384;
+/** Maximum shared-memory pages. 65536 -> 4 GB, the wasm32 limit and the `--max-memory` link flag. */
+export const DEFAULT_MAX_MEMORY_PAGES = 65_536;
 
 const COI_ERROR =
   'onykia-engine requires a cross-origin-isolated host page. Serve it with:\n' +
