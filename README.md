@@ -42,6 +42,20 @@ Cross-Origin-Embedder-Policy: require-corp
 Without these headers `createWasmFactory()` throws synchronously with a
 message pointing at this section. See [SharedArrayBuffer requirements](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer).
 
+## Fonts
+
+typst's default fonts are shipped as files next to the wasm and fetched on
+demand instead of being embedded, so a host has to register them:
+
+```ts
+const fonts = await bundledFonts();            // reads dist/wasm/fonts/fonts.json
+const core = new Core({ wasm, font: fonts.load });
+await core.addFontStubs(fonts.stubs);
+```
+
+Pass a URL to `bundledFonts()` when the files are served from elsewhere, and
+wrap `fonts.load` with `withCache()` to keep them in IndexedDB.
+
 ## More
 
 For contributions & release flow see [`CONTRIBUTING.md`](./CONTRIBUTING.md).

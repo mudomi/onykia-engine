@@ -45,12 +45,20 @@ export interface WasmFactory {
 export interface HandlerOptions {
   /** Initial shared-memory pages (64 KB each). Default: 512 (32 MB). */
   initMemory?: number;
-  /** Maximum shared-memory pages (64 KB each). Default: 16384 (1 GB) - matches the WASM `--max-memory` link flag. */
+  /**
+   * Requested maximum shared-memory pages (64 KB each). Default: 65536 (4 GB, the wasm32 limit).
+   * Halved until the browser accepts the reservation, so the effective ceiling may be lower.
+   */
   maxMemory?: number;
   /** Reject outstanding promises when the handler is destroyed. Default: true. */
   rejectOnDestruction?: boolean;
   /** rayon thread-pool size. Default: `min(hardwareConcurrency, 16)`. Floored, clamped to `[1, 16]`. */
   numThreads?: number;
+  /**
+   * How long a `package` / `font` loader may take before the fetch is reported as failed
+   * and the compile proceeds without it. Default: 60000. `Infinity` disables the timeout.
+   */
+  fetchTimeoutMs?: number;
 }
 
 export type AskName = 'package' | 'font';
@@ -74,13 +82,24 @@ export interface FontStub {
   weight?: number;
   /** OpenType-style stretch number 1..=9 (5 = normal). */
   stretch?: number;
+  /** Part of typst's own default set; `archive` skips it since every typst install has it. */
+  bundled?: boolean;
 }
 
 export type NotifyName = 'status' | 'diagnostics' | 'outline' | 'pages';
 
+/**
+ * Document revision a notification was produced from. Bumped by every
+ * mutating `Core` call, so a consumer can drop results older than the
+ * newest it has seen.
+ */
+export type Revision = number;
+
 export interface StatusNotification {
   status: 'ok' | 'busy' | 'error' | 'crashed';
   message?: string;
+  /** Absent for `crashed`, which reports engine health rather than a compile. */
+  revision?: Revision;
 }
 
 export interface Range {
@@ -94,12 +113,12 @@ export interface Diagnostic {
   range?: Range;
   path?: string;
   package?: string;
-  id?: string;
   hints?: string[];
 }
 
 export interface DiagnosticsNotification {
   diagnostics: Diagnostic[];
+  revision: Revision;
 }
 
 export interface OutlinePosition {
@@ -118,15 +137,19 @@ export interface OutlineEntry {
 
 export interface OutlineNotification {
   entries: OutlineEntry[];
+  revision: Revision;
 }
 
 export interface PageInfo {
   width: number;
   height: number;
+  /** Fingerprint of the page content; unchanged between compiles means the page can be reused. */
+  hash: string;
 }
 
 export interface PagesNotification {
   pages: PageInfo[];
+  revision: Revision;
 }
 
 export interface NotifyPayloads {

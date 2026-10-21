@@ -39,15 +39,15 @@ pub struct OnykiaWorld {
 
     library: LazyHash<Library>,
     fonts: LazyHash<FontBook>,
-    /// Number of leading `font_slots` occupied by the built-in `typst-assets`
-    /// faces. Everything after this index was supplied by the host at runtime.
-    static_fonts: usize,
     /// `None` slots are stubs whose binary has not been delivered yet.
     font_slots: Vec<Option<Font>>,
     /// Parallel to `font_slots`, used to rebuild the `FontBook` cheaply.
     font_infos: Vec<FontInfo>,
     /// Slot index -> opaque key the JS host uses to look up the binary.
     font_stubs: HashMap<usize, EcoString>,
+    /// Slots registered as part of typst's own default set; `archive` skips
+    /// them because every typst install already has those faces.
+    bundled_fonts: HashSet<usize>,
     pending_fonts: Mutex<HashSet<usize>>,
     failed_fonts: HashMap<usize, u8>,
 }
@@ -57,7 +57,7 @@ impl OnykiaWorld {
     const MAX_FONT_FETCH_RETRIES: u8 = 3;
 
     pub fn new() -> Self {
-        let mut world = Self {
+        Self {
             vfs: Vfs::new(),
             main_path: None,
             package_indices: HashMap::new(),
@@ -72,34 +72,24 @@ impl OnykiaWorld {
                     .build(),
             ),
             fonts: LazyHash::new(FontBook::new()),
-            static_fonts: 0,
             font_slots: Vec::new(),
             font_infos: Vec::new(),
             font_stubs: HashMap::new(),
+            bundled_fonts: HashSet::new(),
             pending_fonts: Mutex::new(HashSet::new()),
             failed_fonts: HashMap::new(),
-        };
-        // Embed typst-cli's default fonts (Libertinus Serif, New Computer
-        // Modern, NCM Math, DejaVu Sans Mono) directly into the WASM binary
-        // via `typst-assets`. Hosts can still register additional fonts at
-        // runtime via the `addFont` / `addFonts` dispatch calls.
-        world.add_static_fonts(typst_assets::fonts());
-        world.static_fonts = world.font_slots.len();
-        world
+        }
     }
 
-    /// Fonts the host registered at runtime (excludes the built-in
-    /// `typst-assets` faces and not-yet-delivered stub slots). Used by
-    /// `archive` to bundle only the fonts a fresh engine wouldn't already have.
+    /// Delivered fonts the host registered at runtime, excluding typst's
+    /// bundled default set. Used by `archive` to ship only the fonts a fresh
+    /// typst install wouldn't already have.
     pub fn user_fonts(&self) -> impl Iterator<Item = &Font> {
-        self.font_slots[self.static_fonts..]
+        self.font_slots
             .iter()
-            .filter_map(Option::as_ref)
-    }
-
-    // Avoids the heap copy that add_font performs.
-    fn add_static_fonts(&mut self, files: impl IntoIterator<Item = &'static [u8]>) {
-        self.add_font_files(files.into_iter().map(Bytes::new).collect());
+            .enumerate()
+            .filter(|(index, _)| !self.bundled_fonts.contains(index))
+            .filter_map(|(_, slot)| slot.as_ref())
     }
 
     // Parses all faces in parallel; commits to font_slots and FontBook in one rebuild.
@@ -146,6 +136,9 @@ impl OnykiaWorld {
             self.font_infos.push(info);
             self.font_slots.push(None);
             self.font_stubs.insert(index, stub.key);
+            if stub.bundled {
+                self.bundled_fonts.insert(index);
+            }
         }
         self.rebuild_book();
     }
@@ -192,6 +185,8 @@ impl OnykiaWorld {
 
     // Empty bytes clear the namespace; JS sends that for forbidden private scopes.
     pub fn set_package_index(&mut self, namespace: EcoString, data: Vec<u8>) {
+        // A new index is the host's signal that packages are reachable again.
+        self.failed_packages.clear();
         if data.is_empty() {
             self.package_indices.remove(&namespace);
         } else {
@@ -245,9 +240,10 @@ impl OnykiaWorld {
         }
         // First time we see this spec during the current compile - record it
         // so dispatch::compile can fire a fetch and retry.
-        if let Ok(mut pending) = self.pending_packages.lock() {
-            pending.insert(spec.clone());
-        }
+        self.pending_packages
+            .lock()
+            .expect("pending_packages mutex poisoned")
+            .insert(spec.clone());
         let _ = id;
         PackageStatus::Pending
     }
@@ -265,6 +261,7 @@ pub struct FontStub {
     pub style: Option<FontStyle>,
     pub weight: Option<FontWeight>,
     pub stretch: Option<FontStretch>,
+    pub bundled: bool,
 }
 
 enum PackageStatus {

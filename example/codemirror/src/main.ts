@@ -5,7 +5,9 @@ import { lintGutter } from '@codemirror/lint';
 import { foldGutter, foldKeymap } from '@codemirror/language';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
 import {
+  latestWins,
   renderToCanvas,
+  renderToSvg,
   type ExportArgs,
   type OutlineEntry,
   type PageInfo,
@@ -101,24 +103,19 @@ await core.setTarget('svg');
 
 //  preview 
 
-async function refreshPreview(): Promise<void> {
+// Fast typing emits one `pages` event per compile; only the newest is worth
+// exporting, so overlapping refreshes collapse into the latest one.
+const refreshPreview = latestWins(async (): Promise<void> => {
   const format = previewSelect.value as PreviewFormat;
   switch (format) {
     case 'canvas': return renderCanvasPreview();
     case 'html':   return renderHtmlPreview();
     case 'svg':    return renderSvgPreview();
   }
-}
+});
 
 async function renderSvgPreview(): Promise<void> {
-  const decoder = new TextDecoder();
-  const svgs = await Promise.all(
-    pages.map(async (_, index) => {
-      const res = await core.export({ format: 'svg', index });
-      return decoder.decode(res.data);
-    }),
-  );
-  previewEl.innerHTML = svgs.join('\n');
+  await renderToSvg(core, { container: previewEl, pages });
 }
 
 async function renderCanvasPreview(): Promise<void> {
@@ -171,7 +168,7 @@ const SCROLL_MARGIN_PX = 40;
 // rendered page height. SVG and canvas previews render one element per page; the
 // HTML preview is a single iframe with no per-page element, so this no-ops there.
 function scrollToPosition(page: number, y: number, behavior: ScrollBehavior): void {
-  const pageEls = previewEl.querySelectorAll<HTMLElement>(':scope > svg, :scope > canvas');
+  const pageEls = previewEl.querySelectorAll<HTMLElement>(':scope > .onykia-page, :scope > canvas');
   const el = pageEls[page];
   if (!el) return;
 

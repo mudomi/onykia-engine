@@ -11,11 +11,11 @@ export function pendingEdit(path: string): Promise<void> {
   return editTail.get(path) ?? Promise.resolve();
 }
 
-// Chain a byte-offset edit batch onto the per-path tail so highlight/tooltip
-// can await `pendingEdit(path)` regardless of which source produced the edit.
+// Post immediately: the worker applies edits in arrival order, and waiting
+// for the previous edit to resolve would stall every keystroke typed during a
+// compile. The per-path tail lets highlight/tooltip await `pendingEdit(path)`.
 function enqueueEdit(core: Core, path: string, edits: ByteEdit[]): Promise<void> {
-  const prior = editTail.get(path) ?? Promise.resolve();
-  const next = prior.then(() => core.edit(path, edits)).catch((err) => {
+  const next = core.edit(path, edits).catch((err) => {
     console.warn('[onykia] edit failed:', err);
   });
   editTail.set(path, next);

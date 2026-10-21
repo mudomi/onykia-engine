@@ -52,10 +52,6 @@ function onRunning(event) {
 function crash(err) {
   console.error('[onykia/driver]', err);
   self.onmessage = null;
+  // Handler.crash turns this into the single `status: crashed` notification.
   self.postMessage({ tag: 'online', error: err instanceof Error ? err.message : String(err) });
-  self.postMessage({
-    tag: 'signal',
-    channel: 'status',
-    payload: { status: 'crashed', message: err instanceof Error ? err.message : String(err) },
-  });
 }

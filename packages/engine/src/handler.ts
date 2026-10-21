@@ -11,6 +11,9 @@ const ID_WRAP = 1 << 30;
 
 const THREAD_CAP = 16;
 
+// Generous enough for a multi-megabyte package tarball on a slow mobile link.
+const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
+
 export type WorkerInbox =
   | { tag: 'boot'; memory: WebAssembly.Memory; module: WebAssembly.Module; threads: number }
   | { tag: 'call'; id: number; name: string; args: unknown }
@@ -79,11 +82,10 @@ export class Handler {
 
   private bringUp(): void {
     const threads = clampThreads(this.options.numThreads);
-    const memory = new WebAssembly.Memory({
-      initial: this.options.initMemory ?? DEFAULT_INIT_MEMORY_PAGES,
-      maximum: this.options.maxMemory ?? DEFAULT_MAX_MEMORY_PAGES,
-      shared: true,
-    });
+    const memory = reserveSharedMemory(
+      this.options.initMemory ?? DEFAULT_INIT_MEMORY_PAGES,
+      this.options.maxMemory ?? DEFAULT_MAX_MEMORY_PAGES,
+    );
 
     this.worker = this.factory.worker();
     this.ready = new Promise<void>((resolve, reject) => {
@@ -128,7 +130,11 @@ export class Handler {
 
   private async satisfyFetch(msg: Extract<WorkerOutbox, { tag: 'fetch' }>): Promise<void> {
     try {
-      const bytes = await this.askHost(msg.resource as never, msg.args as never);
+      const bytes = await withTimeout(
+        this.askHost(msg.resource as never, msg.args as never),
+        this.options.fetchTimeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS,
+        `onykia-engine: ${msg.resource} fetch timed out`,
+      );
       this.worker.postMessage({ tag: 'supply', id: msg.id, bytes });
     } catch (err) {
       const failure = err instanceof Error ? err.message : String(err);
@@ -145,6 +151,31 @@ export class Handler {
     this.worker.terminate();
     this.notifyHost('status', { status: 'crashed', message: err.message } as never);
   }
+}
+
+// A hung host loader would otherwise leave the compile status `busy` forever.
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  if (!Number.isFinite(ms)) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+/**
+ * Browsers reserve the whole `maximum` up front and throw RangeError when the
+ * address space isn't available (32-bit hosts, iOS, low-memory devices), so
+ * halve the request until it fits.
+ */
+function reserveSharedMemory(initial: number, maximum: number): WebAssembly.Memory {
+  for (let max = maximum; max >= initial; max = Math.floor(max / 2)) {
+    try {
+      return new WebAssembly.Memory({ initial, maximum: max, shared: true });
+    } catch (err) {
+      if (!(err instanceof RangeError)) throw err;
+    }
+  }
+  throw new RangeError(`onykia-engine: cannot reserve ${initial} shared-memory pages`);
 }
 
 function clampThreads(requested: number | undefined): number {

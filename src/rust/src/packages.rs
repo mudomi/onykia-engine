@@ -46,7 +46,11 @@ pub fn parse_index(namespace: &EcoString, bytes: &[u8]) -> Vec<(PackageSpec, Opt
         Ok(v) => v,
         // Tolerate malformed indices rather than nuking autocomplete entirely.
         Err(err) => {
-            eprintln!("[onykia] malformed package index for namespace '{namespace}': {err}");
+            // eprintln! is a silent no-op on wasm32-unknown-unknown.
+            web_sys::console::warn_1(
+                &format!("[onykia] malformed package index for namespace '{namespace}': {err}")
+                    .into(),
+            );
             return Vec::new();
         }
     };

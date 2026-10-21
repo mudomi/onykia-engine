@@ -1,6 +1,5 @@
 //! Per-compiler-instance state.
 
-use std::cell::Cell;
 use std::collections::HashSet;
 
 use ecow::EcoVec;
@@ -42,7 +41,9 @@ pub struct State {
     pub(crate) subscriptions: HashSet<String>,
     pub(crate) last_document: Option<PagedDocument>,
     pub(crate) last_diagnostics: EcoVec<SourceDiagnostic>,
-    pub(crate) silent_next_compile: Cell<bool>,
+    /// Bumped by every request that changes what a compile would produce.
+    /// Compile notifications carry it so hosts can drop stale results.
+    pub(crate) revision: u64,
     pub(crate) in_flight_packages: HashSet<PackageSpec>,
     pub(crate) in_flight_fonts: HashSet<usize>,
 }
@@ -57,7 +58,7 @@ impl State {
             subscriptions: HashSet::new(),
             last_document: None,
             last_diagnostics: EcoVec::new(),
-            silent_next_compile: Cell::new(false),
+            revision: 0,
             in_flight_packages: HashSet::new(),
             in_flight_fonts: HashSet::new(),
         }

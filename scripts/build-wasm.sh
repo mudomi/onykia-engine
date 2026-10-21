@@ -33,10 +33,21 @@ if ! grep -q 'rust-src (installed)' <<<"$nightly_components" \
   rustup toolchain install nightly --profile minimal --component rust-src --target wasm32-unknown-unknown >/dev/null
 fi
 
+# wasm-opt ships with the `wasm-opt` npm package; prefer that pinned copy over
+# whatever is on PATH so local and CI builds optimise identically.
+wasm_opt="$(command -v wasm-opt || true)"
+[[ -x node_modules/.bin/wasm-opt ]] && wasm_opt=node_modules/.bin/wasm-opt
+if [[ -z $wasm_opt ]]; then
+  echo "error: wasm-opt not found; run 'npm install' first" >&2
+  exit 1
+fi
+
 # Atomics + shared memory + TLS exports required by wasm-bindgen-rayon 1.3.
+# +simd128 speeds up rasterisation and image decoding; every current browser
+# supports it (Safari >= 16.4).
 # +mutable-globals was dropped upstream in 1.3.0 and is no longer needed.
-RUSTFLAGS="-C target-feature=+atomics,+bulk-memory \
-  -C link-arg=--shared-memory -C link-arg=--max-memory=1073741824 -C link-arg=--import-memory \
+RUSTFLAGS="-C target-feature=+atomics,+bulk-memory,+simd128 \
+  -C link-arg=--shared-memory -C link-arg=--max-memory=4294967296 -C link-arg=--import-memory \
   -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size \
   -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base \
   -C link-arg=--export=__heap_base"
@@ -49,6 +60,18 @@ RUSTUP_TOOLCHAIN=nightly RUSTFLAGS="$RUSTFLAGS" \
 
 wasm-bindgen --target web --out-dir "$OUT" --out-name onykia_engine \
   "$target_dir/onykia_core.wasm"
+
+# Every --enable flag names a feature the binary already uses (Rust's wasm32
+# defaults plus the target-features above); wasm-opt refuses to validate the
+# module without them. Debug builds skip this to keep symbols intact.
+if [[ $PROFILE == release ]]; then
+  echo "Optimising with wasm-opt (silent, takes a few minutes)..."
+  "$wasm_opt" -O3 \
+    --enable-threads --enable-bulk-memory --enable-simd \
+    --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int \
+    --enable-reference-types --enable-multivalue \
+    -o "$OUT"/onykia_engine_bg.wasm "$OUT"/onykia_engine_bg.wasm
+fi
 
 # wasm-bindgen suffixes the binary with `_bg`; drop it and patch the loader.
 mv "$OUT"/onykia_engine_bg.wasm      "$OUT"/onykia_engine.wasm
@@ -63,6 +86,10 @@ find "$OUT/snippets" -name workerHelpers.js -exec \
   sed -i "s|import('../../..')|import('../../../onykia_engine.js')|g" {} +
 
 cp "$WORKER_SHIM" "$OUT"/onykia_worker.js
+
+# Default fonts live next to the wasm and are fetched on demand (see
+# `bundledFonts()` in packages/engine/src/fonts.ts).
+cargo run -q -p export-fonts -- "$OUT"/fonts
 cp -r "$OUT"/. "$EXAMPLE"/
 
 echo "Built $OUT/onykia_engine.wasm"

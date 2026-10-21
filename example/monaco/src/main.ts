@@ -2,7 +2,7 @@ import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { bindTypst, primeFile } from '@mudomi/onykia-monaco';
 import { createEngine } from './engine.js';
-import { type OutlineEntry, type PdfStandard } from '@mudomi/onykia-engine';
+import { latestWins, renderToSvg, type OutlineEntry, type PageInfo, type PdfStandard } from '@mudomi/onykia-engine';
 
 (self as { MonacoEnvironment?: monaco.Environment }).MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
@@ -33,18 +33,14 @@ bindTypst(core, model, PATH);
 
 core.onOutline(({ entries }) => renderOutline(entries));
 
-core.onPages(async ({ pages }) => {
-  if (pages.length === 0) return;
+// Fast typing emits one `pages` event per compile; only the newest is worth
+// exporting, so overlapping refreshes collapse into the latest one.
+const refreshPreview = latestWins((pages: PageInfo[]) =>
+  renderToSvg(core, { container: previewEl, pages }),
+);
 
-  const decoder = new TextDecoder();
-  const svgs = await Promise.all(
-    pages.map(async (_, index) => {
-      const res = await core.export({ format: 'svg', index });
-      return decoder.decode(res.data);
-    }),
-  );
-
-  previewEl.innerHTML = svgs.join('\n');
+core.onPages(({ pages }) => {
+  if (pages.length > 0) void refreshPreview(pages);
 });
 
 //  export
@@ -108,7 +104,7 @@ function outlineList(entries: OutlineEntry[]): HTMLUListElement {
 }
 
 function scrollToPage(page: number): void {
-  const pageEls = previewEl.querySelectorAll(':scope > svg');
+  const pageEls = previewEl.querySelectorAll(':scope > .onykia-page');
   pageEls[page]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 

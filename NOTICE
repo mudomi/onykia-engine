@@ -23,7 +23,7 @@ Artefacts this NOTICE applies to:
 THIRD-PARTY-LICENSES.txt sections:
 
    §1  Rust crates statically linked into onykia_engine.wasm.
-   §2  Bundled fonts (typst-assets default font set).
+   §2  Bundled fonts (typst-assets default font set, shipped as files).
    §3  Typst-internal upstream attributions (LLVM Exception, LPPL,
        NCSA).
 
@@ -36,9 +36,9 @@ Copyright (c) 2023 The Typst Project Developers.
 Licensed under the Apache License 2.0.
 
 The onykia_core WebAssembly module statically links the following
-Typst crates at version 0.14:
+Typst crates at version 0.15:
 
-   typst, typst-assets (with the "fonts" feature), typst-eval,
+   typst, typst-assets, typst-eval,
    typst-html, typst-ide, typst-library, typst-pdf, typst-render,
    typst-svg, typst-syntax, typst-utils.
 
@@ -142,10 +142,11 @@ upstream NOTICE file:
 
 
 ==========================================================================
-2. Bundled fonts (typst-assets "fonts" feature)
+2. Bundled fonts (typst-assets default font set)
 ==========================================================================
 
-onykia_engine.wasm embeds the default font set from typst-assets, a
+The npm package ships the default font set from typst-assets as
+separate files next to onykia_engine.wasm (dist/wasm/fonts/), a
 mix of OFL-1.1, Bitstream Vera, CC0 and other font licenses. The
 authoritative per-font attributions and license bodies are reproduced
 verbatim in THIRD-PARTY-LICENSES.txt §2 from the upstream

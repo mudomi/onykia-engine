@@ -1,3 +1,4 @@
+import { syncChildren } from './dom.js';
 import type { Core, PageInfo, RenderResult } from './index.js';
 
 const RGBA_BYTES_PER_PIXEL = 4;
@@ -19,7 +20,9 @@ export interface RenderToCanvasOptions {
 
 /**
  * Render every page of the current document into `container` as one
- * `<canvas>` per page. Replaces any prior children of `container`.
+ * `<canvas>` per page. Canvases already in `container` whose page hash and
+ * zoom are unchanged are kept as they are, so an edit on one page only
+ * re-renders that page.
  */
 export async function renderToCanvas(
   core: Core,
@@ -28,24 +31,31 @@ export async function renderToCanvas(
   const { container, pages } = options;
   const dpr = options.dpr ?? defaultDpr();
   const containerWidth = contentWidth(container);
+  const existing = Array.from(container.children);
 
-  const canvases = pages.map(() => document.createElement('canvas'));
-  container.replaceChildren(...canvases);
+  const canvases = await Promise.all(
+    pages.map(async (page, index) => {
+      const zoom = logicalZoomFor(options, page, containerWidth) * dpr;
+      const prior = existing[index];
+      if (prior instanceof HTMLCanvasElement && prior.dataset.hash === page.hash && Number(prior.dataset.zoom) === zoom) {
+        return prior;
+      }
 
-  await Promise.all(
-    canvases.map(async (canvas, index) => {
-      const page = pages[index];
-      const logicalZoom = logicalZoomFor(options, page, containerWidth);
-
-      const result = await core.render(index, logicalZoom * dpr);
+      const canvas = document.createElement('canvas');
+      const result = await core.render(index, zoom);
       paint(canvas, result);
+      canvas.dataset.hash = page.hash;
+      canvas.dataset.zoom = String(zoom);
 
       // The pixmap is `dpr`x the CSS size; shrink the element so it renders
       // at logical zoom while keeping the extra pixels for sharpness.
       canvas.style.width = `${result.width / dpr}px`;
       canvas.style.height = `${canvas.height / dpr}px`;
+      return canvas;
     }),
   );
+
+  syncChildren(container, canvases);
 }
 
 /** Paint a single {@link RenderResult} onto an existing canvas, sizing it to match. */

@@ -13,7 +13,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # Typst compiler pieces. Pinned to 0.15 to match the target language level.
 typst = "0.15"
-typst-assets = { version = "0.15", features = ["fonts"] }
 typst-syntax = "0.15"
 typst-layout = "0.15"
 typst-ide = "0.15"
@@ -29,6 +28,7 @@ typst-utils = "0.15"
 # Bump in lockstep with the CLI install in CI / scripts.
 wasm-bindgen = "=0.2.118"
 js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde-wasm-bindgen = "0.6"
@@ -36,7 +36,7 @@ serde_bytes = "0.11"
 
 # Fallible helpers.
 ecow = "0.2"
-comemo = "0.4"
+comemo = "0.5"
 
 # Deterministic time for the virtual world (no wall clock in wasm32-unknown-unknown).
 time = { version = "0.3", default-features = false, features = ["alloc"] }
@@ -55,6 +55,11 @@ rayon = "1"
 # on wasm32-unknown-unknown.
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 tar = { version = "0.4", default-features = false }
+
+# The default font set is shipped as separate files by tools/export-fonts,
+# not linked into the wasm. Tests still use the embedded copies as fixtures.
+[dev-dependencies]
+typst-assets = { version = "0.15", features = ["fonts"] }
 
 [features]
 default = ["panic-hook"]
