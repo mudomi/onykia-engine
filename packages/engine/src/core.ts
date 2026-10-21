@@ -43,6 +43,7 @@ export class Core {
   private listeners = new Map<NotifyName, Set<(payload: unknown) => void>>();
   private subscribedChannels = new Set<NotifyName>();
   private replayOps: { name: string; args: unknown }[] = [];
+  private latestRevision = 0;
   // Latest wins: a burst of mutations costs at most the compile already
   // running plus one more for the final state.
   private readonly scheduleCompile: () => Promise<void>;
@@ -67,6 +68,9 @@ export class Core {
     };
 
     const notify = <K extends NotifyName>(name: K, payload: NotifyPayloads[K]) => {
+      // A result older than the newest mutation is superseded by the compile
+      // that mutation scheduled; delivering it would only flash a stale state.
+      if (payload.revision !== undefined && payload.revision < this.latestRevision) return;
       const set = this.listeners.get(name);
       if (!set) return;
       for (const fn of set) fn(payload as unknown);
@@ -102,6 +106,11 @@ export class Core {
     void this.handler.dispatch('unsubscribe', { name }).catch((err: Error) => {
       if (!err.message.includes('destroyed')) console.error('[onykia] unsubscribe failed:', err);
     });
+  }
+
+  /** Revision of the newest applied mutation. Notifications older than this are dropped. */
+  get revision(): number {
+    return this.latestRevision;
   }
 
   onStatus(fn: (p: NotifyPayloads['status']) => void) { return this.on('status', fn); }
@@ -229,6 +238,8 @@ export class Core {
   revive(): void {
     this.handler.revive();
     this.subscribedChannels.clear();
+    // The fresh worker counts from zero again; replay rebuilds the revision.
+    this.latestRevision = 0;
     void this.replayAfterRevive();
   }
 
@@ -246,6 +257,7 @@ export class Core {
     const revision = await this.handler.dispatch<number | undefined>(name, args);
     this.replayOps.push({ name, args: cloneValue(args) });
     if (revision !== undefined) {
+      this.latestRevision = revision;
       void this.scheduleCompile().catch((err: Error) => {
         if (!err.message.includes('destroyed')) console.error('[onykia] compile failed:', err);
       });
