@@ -17,6 +17,10 @@ pub struct StatusNotification<'a> {
 pub struct PageInfo {
     pub width: f64,
     pub height: f64,
+    /// Fingerprint of the laid-out page, so hosts re-export only pages whose
+    /// content changed. Spans are part of it, but typst keeps span numbers
+    /// stable across incremental reparses, so untouched pages keep their hash.
+    pub hash: String,
 }
 
 #[derive(Serialize)]

@@ -143,6 +143,8 @@ export interface OutlineNotification {
 export interface PageInfo {
   width: number;
   height: number;
+  /** Fingerprint of the page content; unchanged between compiles means the page can be reused. */
+  hash: string;
 }
 
 export interface PagesNotification {

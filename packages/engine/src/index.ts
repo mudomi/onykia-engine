@@ -44,5 +44,7 @@ export type {
 export * from './adapter.js';
 export { paint, renderToCanvas } from './canvas.js';
 export type { RenderToCanvasOptions } from './canvas.js';
+export { renderToSvg } from './svg.js';
+export type { RenderToSvgOptions } from './svg.js';
 export { indexedDbCache, withCache } from './cache.js';
 export type { BytesCache } from './cache.js';

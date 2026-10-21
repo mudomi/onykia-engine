@@ -243,6 +243,7 @@ fn pages_notif(state: &State) -> PagesNotification {
         .map(|p| PageInfo {
             width: p.frame.width().to_pt(),
             height: p.frame.height().to_pt(),
+            hash: format!("{:032x}", typst::utils::hash128(p)),
         })
         .collect();
     PagesNotification { pages, revision }
