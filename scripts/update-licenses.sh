@@ -14,8 +14,19 @@ cd "$(dirname "$0")/.."
 CHECK=0
 [[ "${1:-}" == "--check" ]] && CHECK=1
 
+# cargo-about releases differ in which file they pick as a crate's license
+# text, so the output is only reproducible for one version. CI installs the
+# same one (see .github/workflows/ci.yml).
+CARGO_ABOUT_VERSION=0.9.0
+
 if ! command -v cargo-about >/dev/null 2>&1; then
-  echo "error: cargo-about is not installed. Run: cargo install cargo-about --locked" >&2
+  echo "error: cargo-about is not installed. Run: cargo install cargo-about@$CARGO_ABOUT_VERSION --locked" >&2
+  exit 2
+fi
+
+INSTALLED=$(cargo about --version | awk '{print $2}')
+if [[ "$INSTALLED" != "$CARGO_ABOUT_VERSION" ]]; then
+  echo "error: cargo-about $INSTALLED found, $CARGO_ABOUT_VERSION required. Run: cargo install cargo-about@$CARGO_ABOUT_VERSION --locked --force" >&2
   exit 2
 fi
 

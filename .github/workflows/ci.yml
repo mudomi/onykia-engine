@@ -100,9 +100,12 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # Pinned: newer cargo-about releases pick different license texts
+      # for the same crates, which makes the freshness diff version-
+      # dependent. Keep in sync with scripts/update-licenses.sh.
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-about
+          tool: cargo-about@0.9.0
 
       - name: Verify THIRD-PARTY-LICENSES.txt is up to date
         run: bash scripts/update-licenses.sh --check

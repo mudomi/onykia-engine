@@ -73,11 +73,7 @@ Used by:
   * codex 0.3.0
       Copyright (c) The Typst Project Developers
   * color 0.3.3
-  * comemo 0.4.0
-      Copyright (c) Laurenz <laurmaedje@gmail.com>
   * comemo 0.5.1
-      Copyright (c) Laurenz <laurmaedje@gmail.com>
-  * comemo-macros 0.4.0
       Copyright (c) Laurenz <laurmaedje@gmail.com>
   * comemo-macros 0.5.1
       Copyright (c) Laurenz <laurmaedje@gmail.com>
