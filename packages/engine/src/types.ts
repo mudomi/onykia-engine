@@ -88,9 +88,18 @@ export interface FontStub {
 
 export type NotifyName = 'status' | 'diagnostics' | 'outline' | 'pages';
 
+/**
+ * Document revision a notification was produced from. Bumped by every
+ * mutating `Core` call, so a consumer can drop results older than the
+ * newest it has seen.
+ */
+export type Revision = number;
+
 export interface StatusNotification {
   status: 'ok' | 'busy' | 'error' | 'crashed';
   message?: string;
+  /** Absent for `crashed`, which reports engine health rather than a compile. */
+  revision?: Revision;
 }
 
 export interface Range {
@@ -109,6 +118,7 @@ export interface Diagnostic {
 
 export interface DiagnosticsNotification {
   diagnostics: Diagnostic[];
+  revision: Revision;
 }
 
 export interface OutlinePosition {
@@ -127,6 +137,7 @@ export interface OutlineEntry {
 
 export interface OutlineNotification {
   entries: OutlineEntry[];
+  revision: Revision;
 }
 
 export interface PageInfo {
@@ -136,6 +147,7 @@ export interface PageInfo {
 
 export interface PagesNotification {
   pages: PageInfo[];
+  revision: Revision;
 }
 
 export interface NotifyPayloads {

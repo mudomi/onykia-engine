@@ -1,4 +1,5 @@
 import { Handler } from './handler.js';
+import { latestWins } from './schedule.js';
 import type {
   ArchiveOptions,
   AskArgs,
@@ -29,6 +30,11 @@ export interface CoreOptions {
   ) => Promise<Uint8Array | ArrayBuffer>;
   /** `key` is the opaque identifier supplied with the stub via `addFontStubs`. */
   font?: (key: string) => Promise<Uint8Array | ArrayBuffer>;
+  /**
+   * Idle time after the last mutation before the automatic compile starts.
+   * Default: 0 (a burst of synchronous edits still collapses into one compile).
+   */
+  compileDelayMs?: number;
   handlerOptions?: HandlerOptions;
 }
 
@@ -37,8 +43,12 @@ export class Core {
   private listeners = new Map<NotifyName, Set<(payload: unknown) => void>>();
   private subscribedChannels = new Set<NotifyName>();
   private replayOps: { name: string; args: unknown }[] = [];
+  // Latest wins: a burst of mutations costs at most the compile already
+  // running plus one more for the final state.
+  private readonly scheduleCompile: () => Promise<void>;
 
   constructor(options: CoreOptions) {
+    this.scheduleCompile = latestWins(() => this.compile(), options.compileDelayMs);
     const ask: AskHandler = async (name, args) => {
       switch (name) {
         case 'package': {
@@ -124,8 +134,16 @@ export class Core {
     return this.dispatchStateful('setTarget', { target });
   }
 
-  setMain(path: string, silent = false): Promise<void> {
-    return this.dispatchStateful('setMain', { path, silent });
+  setMain(path: string): Promise<void> {
+    return this.dispatchStateful('setMain', { path });
+  }
+
+  /**
+   * Compile the current state now. Mutations schedule this automatically;
+   * call it to force a compile, e.g. after `setTarget('none')` was lifted.
+   */
+  compile(): Promise<void> {
+    return this.handler.dispatch('compile', {});
   }
 
   /** Register a font file (TTF/OTF, may contain multiple faces). */
@@ -222,10 +240,16 @@ export class Core {
     return value;
   }
 
-  private async dispatchStateful<T>(name: string, args: unknown): Promise<T> {
-    const result = await this.handler.dispatch<T>(name, args);
+  // Requests that change the document answer with the new revision; those
+  // get a compile scheduled. Other stateful requests (subscriptions, spellcheck) answer `undefined`.
+  private async dispatchStateful(name: string, args: unknown): Promise<void> {
+    const revision = await this.handler.dispatch<number | undefined>(name, args);
     this.replayOps.push({ name, args: cloneValue(args) });
-    return result;
+    if (revision !== undefined) {
+      void this.scheduleCompile().catch((err: Error) => {
+        if (!err.message.includes('destroyed')) console.error('[onykia] compile failed:', err);
+      });
+    }
   }
 
   private async replayAfterRevive(): Promise<void> {

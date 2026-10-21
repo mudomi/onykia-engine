@@ -5,6 +5,7 @@ import { lintGutter } from '@codemirror/lint';
 import { foldGutter, foldKeymap } from '@codemirror/language';
 import { applyDiagnostics, typstExtensions } from '@mudomi/onykia-codemirror';
 import {
+  latestWins,
   renderToCanvas,
   type ExportArgs,
   type OutlineEntry,
@@ -101,14 +102,16 @@ await core.setTarget('svg');
 
 //  preview 
 
-async function refreshPreview(): Promise<void> {
+// Fast typing emits one `pages` event per compile; only the newest is worth
+// exporting, so overlapping refreshes collapse into the latest one.
+const refreshPreview = latestWins(async (): Promise<void> => {
   const format = previewSelect.value as PreviewFormat;
   switch (format) {
     case 'canvas': return renderCanvasPreview();
     case 'html':   return renderHtmlPreview();
     case 'svg':    return renderSvgPreview();
   }
-}
+});
 
 async function renderSvgPreview(): Promise<void> {
   const decoder = new TextDecoder();

@@ -32,6 +32,11 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         "setRemotePackages" => handle_set_packages(state, args).map(|_| JsValue::UNDEFINED),
         "configureSpellCheck" => Ok(JsValue::UNDEFINED), // Spellcheck delegated to JS.
 
+        "compile" => {
+            compile::run(state);
+            Ok(JsValue::UNDEFINED)
+        }
+
         "subscribe" => handle_subscribe(state, args).map(|_| JsValue::UNDEFINED),
         "unsubscribe" => handle_unsubscribe(state, args).map(|_| JsValue::UNDEFINED),
 
@@ -53,17 +58,19 @@ pub fn dispatch(state: &mut State, id: u32, name: &str, args: JsValue) {
         _ => Err(format!("unknown request: {name}")),
     };
 
-    if is_compile_trigger(name) && result.is_ok() {
-        compile::run(state);
-    }
-
     match result {
+        Ok(_) if mutates_document(name) => {
+            state.revision += 1;
+            post_result(id, JsValue::from(state.revision as f64));
+        }
         Ok(value) => post_result(id, value),
         Err(err) => post_failure(id, &err),
     }
 }
 
-fn is_compile_trigger(name: &str) -> bool {
+/// Requests that change what the next compile produces. They answer with the
+/// new revision so the host can schedule a compile; nothing compiles implicitly.
+fn mutates_document(name: &str) -> bool {
     matches!(
         name,
         "create"
@@ -150,13 +157,10 @@ fn handle_set_target(state: &mut State, args: JsValue) -> Result<(), String> {
 #[derive(Deserialize)]
 struct SetMainArgs {
     path: String,
-    #[serde(default)]
-    silent: bool,
 }
 fn handle_set_main(state: &mut State, args: JsValue) -> Result<(), String> {
     let args: SetMainArgs = from_js(args)?;
     state.world.main_path = Some(args.path);
-    state.silent_next_compile.set(args.silent);
     Ok(())
 }
 

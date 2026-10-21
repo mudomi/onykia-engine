@@ -10,6 +10,7 @@ pub struct StatusNotification<'a> {
     pub status: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    pub revision: u64,
 }
 
 #[derive(Serialize)]
@@ -21,11 +22,13 @@ pub struct PageInfo {
 #[derive(Serialize)]
 pub struct PagesNotification {
     pub pages: Vec<PageInfo>,
+    pub revision: u64,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize)]
 pub struct OutlineNotification {
     pub entries: Vec<OutlineEntry>,
+    pub revision: u64,
 }
 
 #[derive(Serialize)]
@@ -45,9 +48,10 @@ pub struct OutlinePosition {
     pub y: f64,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize)]
 pub struct DiagnosticsNotification {
     pub diagnostics: Vec<Diagnostic>,
+    pub revision: u64,
 }
 
 #[derive(Serialize)]
@@ -82,6 +86,7 @@ pub fn emit<T: serde::Serialize>(state: &State, name: &str, payload: &T) {
                 if let Ok(fallback) = to_js(&StatusNotification {
                     status: "error",
                     message: Some(err),
+                    revision: state.revision,
                 }) {
                     post_signal("status", fallback);
                 }

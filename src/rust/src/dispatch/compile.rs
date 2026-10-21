@@ -1,4 +1,5 @@
-//! Full compilation pipeline. Runs after every state-changing request.
+//! Full compilation pipeline. Runs on an explicit `compile` request and
+//! again once pending package/font fetches resolve.
 
 use ecow::EcoVec;
 use serde::Serialize;
@@ -17,9 +18,6 @@ use crate::packages;
 use crate::state::{State, Target};
 
 pub fn run(state: &mut State) {
-    if state.silent_next_compile.replace(false) {
-        return;
-    }
     if state.world.main_path.is_none() || state.target == Target::None {
         return;
     }
@@ -30,6 +28,7 @@ pub fn run(state: &mut State) {
         &StatusNotification {
             status: "busy",
             message: None,
+            revision: state.revision,
         },
     );
 
@@ -173,6 +172,7 @@ fn emit_success(state: &State, warnings: &EcoVec<SourceDiagnostic>) {
         &StatusNotification {
             status: "ok",
             message: None,
+            revision: state.revision,
         },
     );
     notify::emit(state, "diagnostics", &diagnostics_notif(state, warnings));
@@ -187,6 +187,7 @@ fn emit_failure(state: &State, diags: &EcoVec<SourceDiagnostic>) {
         &StatusNotification {
             status: "error",
             message: None,
+            revision: state.revision,
         },
     );
     notify::emit(state, "diagnostics", &diagnostics_notif(state, diags));
@@ -205,7 +206,10 @@ fn diagnostics_notif(state: &State, diags: &EcoVec<SourceDiagnostic>) -> Diagnos
             hints: diag.hints.iter().map(|h| h.v.to_string()).collect(),
         });
     }
-    DiagnosticsNotification { diagnostics: out }
+    DiagnosticsNotification {
+        diagnostics: out,
+        revision: state.revision,
+    }
 }
 
 fn resolve_span(state: &State, span: DiagSpan) -> (Option<String>, Option<String>, Option<Range>) {
@@ -226,8 +230,12 @@ fn resolve_span(state: &State, span: DiagSpan) -> (Option<String>, Option<String
 }
 
 fn pages_notif(state: &State) -> PagesNotification {
+    let revision = state.revision;
     let Some(doc) = state.last_document.as_ref() else {
-        return PagesNotification { pages: Vec::new() };
+        return PagesNotification {
+            pages: Vec::new(),
+            revision,
+        };
     };
     let pages = doc
         .pages()
@@ -237,17 +245,18 @@ fn pages_notif(state: &State) -> PagesNotification {
             height: p.frame.height().to_pt(),
         })
         .collect();
-    PagesNotification { pages }
+    PagesNotification { pages, revision }
 }
 
 fn outline_notif(state: &State) -> OutlineNotification {
-    let Some(doc) = state.last_document.as_ref() else {
-        return OutlineNotification {
-            entries: Vec::new(),
-        };
-    };
+    let entries = state
+        .last_document
+        .as_ref()
+        .map(extract_outline)
+        .unwrap_or_default();
     OutlineNotification {
-        entries: extract_outline(doc),
+        entries,
+        revision: state.revision,
     }
 }
 
